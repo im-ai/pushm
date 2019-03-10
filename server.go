@@ -14,21 +14,20 @@ var (
 		CheckOrigin: func(r *http.Request) bool {
 			return true
 		},
-
-
 	}
 )
+
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	var (
 		wsConn *websocket.Conn
-		err error
-		data []byte
-		conn *impl.Connection
+		err    error
+		data   []byte
+		conn   *impl.Connection
 	)
 
 	// 升级 为 websocket 请求
-	if wsConn,err = upgrader.Upgrade(w,r,nil); err!=nil{
+	if wsConn, err = upgrader.Upgrade(w, r, nil); err != nil {
 		return
 	}
 
@@ -41,22 +40,20 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		var (
 			err error
 		)
-		for   {
-			if err = conn.WriterMessage([]byte("hearbeat"));err !=nil{
+		for {
+			if err = conn.WriterMessage([]byte("hearbeat")); err != nil {
 				return
 			}
-			time.Sleep(1*time.Second)
+			time.Sleep(5 * time.Second)
 		}
 
 	}()
 
-
-
-	for{
-		if data,err = conn.ReadMessage();err !=nil{
+	for {
+		if data, err = conn.ReadMessage(); err != nil {
 			goto ERR
 		}
-		if err = conn.WriterMessage(data);err != nil{
+		if err = conn.WriterMessage(data); err != nil {
 			goto ERR
 		}
 	}
@@ -66,6 +63,6 @@ ERR:
 }
 
 func main() {
-	http.HandleFunc("/ws",wsHandler)
-	http.ListenAndServe(":7777",nil)
+	http.HandleFunc("/ws", wsHandler)
+	http.ListenAndServe(":7777", nil)
 }
