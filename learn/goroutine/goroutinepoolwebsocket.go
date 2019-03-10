@@ -6,6 +6,7 @@ import (
 	"github.com/im-ai/pushm/impl"
 	"github.com/panjf2000/ants"
 	"net/http"
+	"sync/atomic"
 	"time"
 )
 
@@ -15,13 +16,21 @@ var (
 			return true
 		},
 	}
+	running int32
 )
 
+func incRunning() {
+	atomic.AddInt32(&running, 1)
+}
+func decRunning() {
+	atomic.AddInt32(&running, -1)
+}
 func main() {
-	p, _ := ants.NewPool(100000)
+	p, _ := ants.NewPool(200000)
 	defer p.Release()
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		incRunning()
 		var (
 			wsConn *websocket.Conn
 			err    error
@@ -49,7 +58,8 @@ func main() {
 				}
 				fmt.Printf("pool, running workers number:%d\n", p.Running())
 				fmt.Printf("pool, Cap workers number:%d\n", p.Cap())
-				fmt.Printf("pool, Free workers number:%d\n\n", p.Free())
+				fmt.Printf("pool, Free workers number:%d\n", p.Free())
+				fmt.Printf("client, client workers number:%d\n\n", running)
 				time.Sleep(1 * time.Second)
 			}
 		})
@@ -69,8 +79,10 @@ func main() {
 				goto ERR
 			}
 		}
+		decRunning()
 	ERR:
 		conn.Close()
+
 	})
 	http.ListenAndServe(":7777", nil)
 }
