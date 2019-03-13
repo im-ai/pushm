@@ -9,14 +9,17 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"sync"
 	"time"
 )
 
-var addr = flag.String("addr", "localhost:7777", "http service address")
+var addr = flag.String("addr", "192.168.9.142:7776", "http service address")
 
 func main() {
 	p, _ := ants.NewPool(200000)
 	defer p.Release()
+
+	var wg sync.WaitGroup
 
 	go func() {
 		for {
@@ -28,10 +31,13 @@ func main() {
 	}()
 
 	for i := 0; i < 100000; i++ {
+		wg.Add(1)
 		_ = p.Submit(func() {
 			wscient()
+			wg.Done()
 		})
 	}
+	wg.Wait()
 
 }
 func wscient() {
