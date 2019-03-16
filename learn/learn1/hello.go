@@ -1,7 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/im-ai/stringutil"
+)
 
 func main() {
-	fmt.Printf("hello")
+	fmt.Println("hello")
+	fmt.Println(stringutil.Reverse("hello"))
 }
