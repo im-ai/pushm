@@ -31,6 +31,6 @@ func TestAdd(t *testing.T) {
 // 压力测试 模板
 func Benchmark_Add(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		Add(4, 5)
+		Add(i, i)
 	}
 }
