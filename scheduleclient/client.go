@@ -58,20 +58,20 @@ func main() {
 	}()
 
 	//测试用的，开300个goroutine每秒发送一个包
-	for i := 0; i < 300; i++ {
-		go func() {
-			sendTimer := time.After(1 * time.Second)
-			for {
-				select {
-				case <-sendTimer:
-					client.sendReportPacket()
-					sendTimer = time.After(1 * time.Second)
-				case <-client.stopChan:
-					return
-				}
-			}
-		}()
-	}
+	//for i := 0; i < 300; i++ {
+	//	go func() {
+	//		sendTimer := time.After(1 * time.Second)
+	//		for {
+	//			select {
+	//			case <-sendTimer:
+	//				client.sendReportPacket()
+	//				sendTimer = time.After(1 * time.Second)
+	//			case <-client.stopChan:
+	//				return
+	//			}
+	//		}
+	//	}()
+	//}
 	//等待退出
 	<-client.stopChan
 
