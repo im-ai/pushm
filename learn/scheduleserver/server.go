@@ -4,41 +4,16 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/im-ai/pushm/learn/scheduleprotocol"
 	"hash/crc32"
 	"io"
 	"net"
 	"os"
 )
 
-//数据包的类型
-const (
-	HEART_BEAT_PACKET = 0x00
-	REPORT_PACKET     = 0x01
-)
-
 var (
 	server = ":9876"
 )
-
-//这里是包的结构体，其实是可以不需要的
-type Packet struct {
-	PacketType    byte
-	PacketContent []byte
-}
-
-//心跳包，这里用了json来序列化，也可以用github上的gogo/protobuf包
-//具体见(https://github.com/gogo/protobuf)
-type HeartPacket struct {
-	Version   string `json:"version"`
-	Timestamp int64  `json:"timestamp"`
-}
-
-//正式上传的数据包
-type ReportPacket struct {
-	Content   string `json:"content"`
-	Rand      int    `json:"rand"`
-	Timestamp int64  `json:"timestamp"`
-}
 
 //与服务器相关的资源都放在这里面
 type TcpServer struct {
