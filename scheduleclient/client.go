@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/panjf2000/ants"
 	"log"
 	"math/rand"
 	"net"
@@ -19,6 +20,7 @@ import (
 //默认的服务器地址
 var (
 	serveradd = "192.168.1.70:9876"
+	gonumber  = 0
 )
 
 //客户端对象
@@ -92,6 +94,9 @@ INIT:
 
 // 接收数据包
 func (client *TcpClient) receivePackets() {
+	pool, _ := ants.NewPool(200000)
+	defer pool.Release()
+
 	reader := bufio.NewReader(client.connection)
 	for {
 		//承接上面说的服务器端的偷懒，我这里读也只是以\n为界限来读区分包
@@ -101,15 +106,22 @@ func (client *TcpClient) receivePackets() {
 			close(client.stopChan)
 			break
 		}
-		//fmt.Print(msg)
+		fmt.Print(msg)
 		var pbody PressureBody
-		json.Unmarshal([]byte(msg), &pbody)
-		if pbody.TypeId == 3 {
-			go connectWs(pbody.Url)
-		} else if pbody.TypeId == 2 {
-			go connectHttpPost(pbody.Url, pbody.Json)
-		} else if pbody.TypeId == 1 {
-			go connectHttpGet(pbody.Url)
+		_ = json.Unmarshal([]byte(msg), &pbody)
+		gonumber = gonumber + pbody.Number
+		for i := 0; i < pbody.Number; i++ {
+			if pbody.TypeId == 3 {
+				_ = pool.Submit(func() {
+					connectWs(pbody.Url)
+				})
+			} else if pbody.TypeId == 2 {
+				_ = pool.Submit(func() {
+					connectHttpPost(pbody.Url, pbody.Json)
+				})
+			} else if pbody.TypeId == 1 {
+				go connectHttpGet(pbody.Url)
+			}
 		}
 	}
 }
@@ -145,6 +157,7 @@ func (client *TcpClient) sendHeartPacket() {
 	heartPacket := HeartPacket{
 		Version:   "1.0",
 		Timestamp: time.Now().Unix(),
+		Gonumber:  gonumber,
 	}
 	packetBytes, err := json.Marshal(heartPacket)
 	if err != nil {
@@ -179,6 +192,7 @@ func connectHttpGet(url string) {
 		panic(err)
 	}
 	defer resp.Body.Close()
+	gonumber--
 }
 
 func connectHttpPost(url, json string) {
@@ -192,7 +206,7 @@ func connectHttpPost(url, json string) {
 		panic(err)
 	}
 	defer resp.Body.Close()
-
+	gonumber--
 }
 func connectWs(urls string) {
 	fmt.Println("ws:" + urls)
@@ -251,5 +265,6 @@ func connectWs(urls string) {
 			return
 		}
 	}
+	gonumber--
 
 }

@@ -47,6 +47,7 @@ func main() {
 		TypeId: typeId,
 		Url:    urlstr,
 		Json:   jsonstr,
+		Number: nubmer,
 	}
 	bytesa, e := json.Marshal(config)
 	if e != nil {
@@ -194,11 +195,7 @@ func processRecvData(packet *Packet, conn net.Conn) {
 		var beatPacket HeartPacket
 		json.Unmarshal(packet.PacketContent, &beatPacket)
 		fmt.Printf("recieve heat beat from [%s] ,data is [%v]\n", conn.RemoteAddr().String(), beatPacket)
-		go func() {
-			for i := 0; i < nubmer; i++ {
-				conn.Write(bytesCombine)
-			}
-		}()
+		conn.Write(bytesCombine)
 		return
 	case REPORT_PACKET:
 		var reportPacket ReportPacket

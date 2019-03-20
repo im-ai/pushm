@@ -21,6 +21,7 @@ type Packet struct {
 type HeartPacket struct {
 	Version   string `json:"version"`
 	Timestamp int64  `json:"timestamp"`
+	Gonumber  int    `json:"gonumber"`
 }
 
 //数据包
