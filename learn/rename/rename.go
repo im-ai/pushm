@@ -30,8 +30,8 @@ func GetAllFile(pathname string, zhibiaomap map[int]string) error {
 			GetAllFile(pathname+"\\"+fi.Name()+"\\", zhibiaomap)
 		} else {
 			filePath := pathname + "\\" + fi.Name()
-			//readfileAndRename(pathname, filePath)
-			readfileAndRename2(pathname, filePath, zhibiaomap)
+			readfileAndRename(pathname, filePath)
+			//readfileAndRename2(pathname, filePath, zhibiaomap)
 
 		}
 	}
@@ -56,7 +56,7 @@ func readfileAndRename2(pathname, filePath string, zhibiaomap map[int]string) {
 		flag++
 
 		if line == "32767" {
-			bzname = Substr(bzname, 0, len(bzname)-1)
+			//bzname = Substr(bzname, 0, len(bzname)-1)
 			lasidx := strings.LastIndex(bzname, "_")
 			bzname = Substr(bzname, 0, lasidx)
 			lendd = preline
