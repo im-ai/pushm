@@ -159,7 +159,12 @@ func processRecvData(packet *Packet, conn net.Conn) {
 		var beatPacket HeartPacket
 		json.Unmarshal(packet.PacketContent, &beatPacket)
 		fmt.Printf("recieve heat beat from [%s] ,data is [%v]\n", conn.RemoteAddr().String(), beatPacket)
-		conn.Write([]byte("heartBeat\n"))
+		//conn.Write([]byte("heartBeat\n"))
+		go func() {
+			for i := 0; i < 10000; i++ {
+				conn.Write([]byte("192.168.9.142:7776\n"))
+			}
+		}()
 		return
 	case REPORT_PACKET:
 		var reportPacket ReportPacket

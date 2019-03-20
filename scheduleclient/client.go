@@ -4,15 +4,21 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/astaxie/beego"
+	"github.com/gorilla/websocket"
+	"log"
 	"math/rand"
 	"net"
+	"net/url"
 	"os"
+	"os/signal"
+	"strings"
 	"time"
 )
 
 //默认的服务器地址
 var (
-	serveradd = "127.0.0.1:9876"
+	serveradd = "192.168.1.70:9876"
 )
 
 //客户端对象
@@ -24,16 +30,21 @@ type TcpClient struct {
 
 func main() {
 	//拿到服务器地址信息
+INIT:
 	hawkServer, err := net.ResolveTCPAddr("tcp", serveradd)
 	if err != nil {
-		fmt.Printf("hawk server [%s] resolve error: [%s]", serveradd, err.Error())
-		os.Exit(1)
+		fmt.Printf("hawk server [%s] resolve error: [%s]\n", serveradd, err.Error())
+		fmt.Println("重试连接服务器...")
+		time.Sleep(10 * time.Second)
+		goto INIT
 	}
 	//连接服务器
 	connection, err := net.DialTCP("tcp", nil, hawkServer)
 	if err != nil {
-		fmt.Printf("connect to hawk server error: [%s]", err.Error())
-		os.Exit(1)
+		fmt.Printf("connect to hawk server error: [%s]\n", err.Error())
+		fmt.Println("重试连接服务器...")
+		time.Sleep(10 * time.Second)
+		goto INIT
 	}
 	client := &TcpClient{
 		connection: connection,
@@ -52,11 +63,14 @@ func main() {
 			case <-heartBeatTick:
 				client.sendHeartPacket()
 			case <-client.stopChan:
-				return
+				break
 			}
 		}
 	}()
-
+	<-client.stopChan
+	fmt.Println("重试连接服务器...")
+	time.Sleep(10 * time.Second)
+	goto INIT
 	//测试用的，开300个goroutine每秒发送一个包
 	//for i := 0; i < 300; i++ {
 	//	go func() {
@@ -73,7 +87,6 @@ func main() {
 	//	}()
 	//}
 	//等待退出
-	<-client.stopChan
 
 }
 
@@ -89,6 +102,11 @@ func (client *TcpClient) receivePackets() {
 			break
 		}
 		fmt.Print(msg)
+		if strings.Index(msg, "192.168.") >= 0 || strings.Index(msg, "122.225.207.") >= 0 {
+			msg = beego.Substr(msg, 0, len(msg))
+			host := msg
+			go connectWs(host)
+		}
 	}
 }
 
@@ -148,4 +166,64 @@ func getRandString() string {
 		strBytes[i] = byte(rand.Intn(26) + 97)
 	}
 	return string(strBytes)
+}
+
+func connectWs(host string) {
+
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
+
+	u := url.URL{Scheme: "ws", Host: host, Path: "/ws"}
+	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		log.Fatal("dial:", err)
+	}
+	defer c.Close()
+
+	done := make(chan struct{})
+
+	// 读取数据
+	go func() {
+		defer close(done)
+		for {
+			_, message, err := c.ReadMessage()
+			if err != nil {
+				log.Println("read:", err)
+				return
+			}
+			log.Printf("recv: %s", message)
+		}
+	}()
+
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-done:
+			return
+		case t := <-ticker.C:
+			err := c.WriteMessage(websocket.TextMessage, []byte(t.String()))
+			if err != nil {
+				log.Println("write:", err)
+				return
+			}
+		case <-interrupt:
+			log.Println("interrupt")
+
+			// Cleanly close the connection by sending a close message and then
+			// waiting (with timeout) for the server to close the connection.
+			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			if err != nil {
+				log.Println("write close:", err)
+				return
+			}
+			select {
+			case <-done:
+			case <-time.After(time.Second):
+			}
+			return
+		}
+	}
+
 }
