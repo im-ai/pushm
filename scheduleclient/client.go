@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/jander/golog/logger"
+	"github.com/kardianos/service"
 	"github.com/panjf2000/ants"
 	"log"
 	"math/rand"
@@ -30,7 +32,16 @@ type TcpClient struct {
 	stopChan   chan struct{}
 }
 
-func main() {
+type program struct{}
+
+func (p *program) Start(s service.Service) error {
+	go p.run()
+	return nil
+}
+
+func (p *program) run() {
+	// 代码写在这儿
+
 	//拿到服务器地址信息
 INIT:
 	hawkServer, err := net.ResolveTCPAddr("tcp", serveradd)
@@ -89,6 +100,46 @@ INIT:
 	//	}()
 	//}
 	//等待退出
+}
+
+func (p *program) Stop(s service.Service) error {
+	return nil
+}
+
+func main() {
+	svcConfig := &service.Config{
+		Name:        "scheduleclients", //服务显示名称
+		DisplayName: "scheduleclients", //服务名称
+		Description: "scheduleclients", //服务描述
+
+	}
+	prg := &program{}
+	s, err := service.New(prg, svcConfig)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	if len(os.Args) > 1 {
+		if os.Args[1] == "install" {
+			s.Install()
+			logger.Println("服务安装成功")
+			return
+		}
+		if os.Args[1] == "remove" {
+			s.Uninstall()
+			logger.Println("服务卸载成功")
+			return
+		}
+	}
+
+	err = s.Run()
+
+	if err != nil {
+		logger.Error(err)
+	}
 
 }
 
