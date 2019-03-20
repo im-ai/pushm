@@ -67,6 +67,7 @@ INIT:
 		connection: connection,
 		hawkServer: hawkServer,
 		stopChan:   make(chan struct{}),
+		netStop:    0,
 	}
 
 	//启动接收
@@ -79,6 +80,10 @@ INIT:
 			select {
 			case <-heartBeatTick:
 				client.sendHeartPacket()
+				if client.netStop == 1 {
+					fmt.Println("net stop common !")
+					return
+				}
 			case <-client.stopChan:
 				break
 			}
@@ -161,6 +166,7 @@ func (client *TcpClient) receivePackets() {
 		msg, err := reader.ReadString('\n')
 		if err != nil {
 			//在这里也请处理如果服务器关闭时的异常
+			fmt.Println("server close \n")
 			close(client.stopChan)
 			client.netStop = 1
 			break
@@ -300,6 +306,22 @@ func connectWs(urls string, client *TcpClient) {
 			_, message, err := c.ReadMessage()
 			if err != nil {
 				log.Println("read:", err)
+				return
+			}
+			if client.netStop == 1 {
+				log.Println("stop common")
+				gonumber--
+				return
+			}
+
+			v, _ := mem.VirtualMemory()
+			if v.UsedPercent > 98.0 {
+				gonumber--
+				return
+			}
+			cc, _ := cpu.Percent(time.Second, false)
+			if cc[0] > 98 {
+				gonumber--
 				return
 			}
 			log.Printf("recv: %s", message)
