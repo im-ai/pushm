@@ -47,3 +47,10 @@ func EnPackSendData(sendBytes []byte) []byte {
 	fmt.Println(result)
 	return result
 }
+
+type PressureBody struct {
+	TypeId int    // 1: http get 2: http post  3: ws
+	Url    string // 请求 url
+	Json   string // post参数
+	Number int    // 每秒开启 gorouting 次数
+}

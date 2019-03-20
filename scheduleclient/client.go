@@ -2,17 +2,17 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/astaxie/beego"
 	"github.com/gorilla/websocket"
 	"log"
 	"math/rand"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
-	"strings"
 	"time"
 )
 
@@ -57,7 +57,7 @@ INIT:
 
 	//发送心跳的goroutine
 	go func() {
-		heartBeatTick := time.Tick(2 * time.Second)
+		heartBeatTick := time.Tick(1 * time.Second)
 		for {
 			select {
 			case <-heartBeatTick:
@@ -101,11 +101,15 @@ func (client *TcpClient) receivePackets() {
 			close(client.stopChan)
 			break
 		}
-		fmt.Print(msg)
-		if strings.Index(msg, "192.168.") >= 0 || strings.Index(msg, "122.225.207.") >= 0 {
-			msg = beego.Substr(msg, 0, len(msg))
-			host := msg
-			go connectWs(host)
+		//fmt.Print(msg)
+		var pbody PressureBody
+		json.Unmarshal([]byte(msg), &pbody)
+		if pbody.TypeId == 3 {
+			go connectWs(pbody.Url)
+		} else if pbody.TypeId == 2 {
+			go connectHttpPost(pbody.Url, pbody.Json)
+		} else if pbody.TypeId == 1 {
+			go connectHttpGet(pbody.Url)
 		}
 	}
 }
@@ -168,12 +172,34 @@ func getRandString() string {
 	return string(strBytes)
 }
 
-func connectWs(host string) {
+func connectHttpGet(url string) {
+	fmt.Println("GET:" + url)
+	resp, err := http.Get(url)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+}
 
+func connectHttpPost(url, json string) {
+	fmt.Println("POST:" + url)
+	var jsonStr = []byte(json)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+}
+func connectWs(urls string) {
+	fmt.Println("ws:" + urls)
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
-	u := url.URL{Scheme: "ws", Host: host, Path: "/ws"}
+	u := url.URL{Scheme: "ws", Host: urls, Path: "/ws"}
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
 		log.Fatal("dial:", err)

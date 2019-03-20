@@ -2,16 +2,23 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"hash/crc32"
 	"io"
+	"io/ioutil"
 	"net"
 	"os"
+	"regexp"
+	"strconv"
+	"strings"
 )
 
 var (
-	server = ":9876"
+	server       = ":9876"
+	nubmer       = 0
+	bytesCombine []byte
 )
 
 //与服务器相关的资源都放在这里面
@@ -21,6 +28,34 @@ type TcpServer struct {
 }
 
 func main() {
+
+	numberstr := getCfg("number", "sfig.ini")
+	fmt.Println("number:", numberstr)
+	nubmers, _ := strconv.Atoi(numberstr)
+	nubmer = nubmers
+
+	typeIdstr := getCfg("typeId", "sfig.ini")
+	fmt.Println("typeId:", typeIdstr)
+	typeId, _ := strconv.Atoi(typeIdstr)
+
+	urlstr := getCfg("url", "sfig.ini")
+	fmt.Println("url:", urlstr)
+
+	jsonstr := getCfg("json", "sfig.ini")
+	fmt.Println("json:", jsonstr)
+	config := &PressureBody{
+		TypeId: typeId,
+		Url:    urlstr,
+		Json:   jsonstr,
+	}
+	bytesa, e := json.Marshal(config)
+	if e != nil {
+		fmt.Println(e)
+		return
+	}
+	bytesCombines := BytesCombine(bytesa, []byte("\n"))
+	bytesCombine = bytesCombines
+
 	//类似于初始化套接字，绑定端口
 	hawkServer, err := net.ResolveTCPAddr("tcp", server)
 	checkErr(err)
@@ -159,10 +194,9 @@ func processRecvData(packet *Packet, conn net.Conn) {
 		var beatPacket HeartPacket
 		json.Unmarshal(packet.PacketContent, &beatPacket)
 		fmt.Printf("recieve heat beat from [%s] ,data is [%v]\n", conn.RemoteAddr().String(), beatPacket)
-		//conn.Write([]byte("heartBeat\n"))
 		go func() {
-			for i := 0; i < 10000; i++ {
-				conn.Write([]byte("192.168.9.142:7776\n"))
+			for i := 0; i < nubmer; i++ {
+				conn.Write(bytesCombine)
 			}
 		}()
 		return
@@ -181,4 +215,38 @@ func checkErr(err error) {
 		fmt.Println(err)
 		os.Exit(-1)
 	}
+}
+
+func getCfg(tag string, filepath string) string {
+	dat, err := ioutil.ReadFile(filepath) //读取文件
+	checkErr(err)                         //检查是否有错误
+	cfg := string(dat)                    //将读取到达配置文件转化为字符串
+	var str string
+	s1 := fmt.Sprintf("[^;]%s *= *.{1,}\\n", tag)
+	s2 := fmt.Sprintf("%s *= *", tag)
+	reg, err := regexp.Compile(s1)
+	if err == nil {
+		tag_str := reg.FindString(cfg) //在配置字符串中搜索
+		if len(tag_str) > 0 {
+			r, _ := regexp.Compile(s2)
+			i := r.FindStringIndex(tag_str) //查找配置字符串的确切起始位置
+			var h_str = make([]byte, len(tag_str)-i[1])
+			copy(h_str, tag_str[i[1]:])
+			str1 := fmt.Sprintln(string(h_str))
+			str2 := strings.Replace(str1, "\n", "", -1)
+			str = strings.Replace(str2, "\r", "", -1)
+		}
+	}
+	return str
+}
+
+//BytesCombine 多个[]byte数组合并成一个[]byte
+func BytesCombine(pBytes ...[]byte) []byte {
+	len := len(pBytes)
+	s := make([][]byte, len)
+	for index := 0; index < len; index++ {
+		s[index] = pBytes[index]
+	}
+	sep := []byte("")
+	return bytes.Join(s, sep)
 }
