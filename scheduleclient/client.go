@@ -9,6 +9,8 @@ import (
 	"github.com/jander/golog/logger"
 	"github.com/kardianos/service"
 	"github.com/panjf2000/ants"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/mem"
 	"log"
 	"math/rand"
 	"net"
@@ -16,6 +18,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
 	"time"
 )
 
@@ -30,6 +33,7 @@ type TcpClient struct {
 	connection *net.TCPConn
 	hawkServer *net.TCPAddr
 	stopChan   chan struct{}
+	netStop    int
 }
 
 type program struct{}
@@ -107,10 +111,13 @@ func (p *program) Stop(s service.Service) error {
 }
 
 func main() {
+
+	rand.Seed(time.Now().UnixNano())
+	itoa := strconv.Itoa(rand.Intn(100))
 	svcConfig := &service.Config{
-		Name:        "scheduleclients", //服务显示名称
-		DisplayName: "scheduleclients", //服务名称
-		Description: "scheduleclients", //服务描述
+		Name:        "scheduleclient" + itoa, //服务显示名称
+		DisplayName: "scheduleclient" + itoa, //服务名称
+		Description: "scheduleclient" + itoa, //服务描述
 
 	}
 	prg := &program{}
@@ -155,23 +162,34 @@ func (client *TcpClient) receivePackets() {
 		if err != nil {
 			//在这里也请处理如果服务器关闭时的异常
 			close(client.stopChan)
+			client.netStop = 1
 			break
 		}
 		fmt.Print(msg)
 		var pbody PressureBody
 		_ = json.Unmarshal([]byte(msg), &pbody)
+		v, _ := mem.VirtualMemory()
+		if v.UsedPercent > 98.0 {
+			continue
+		}
+		cc, _ := cpu.Percent(time.Second, false)
+		if cc[0] > 98 {
+			continue
+		}
 		gonumber = gonumber + pbody.Number
 		for i := 0; i < pbody.Number; i++ {
 			if pbody.TypeId == 3 {
 				_ = pool.Submit(func() {
-					connectWs(pbody.Url)
+					go connectWs(pbody.Url, client)
 				})
 			} else if pbody.TypeId == 2 {
 				_ = pool.Submit(func() {
 					connectHttpPost(pbody.Url, pbody.Json)
 				})
 			} else if pbody.TypeId == 1 {
-				go connectHttpGet(pbody.Url)
+				_ = pool.Submit(func() {
+					connectHttpGet(pbody.Url)
+				})
 			}
 		}
 	}
@@ -261,7 +279,7 @@ func connectHttpPost(url, json string) {
 	defer resp.Body.Close()
 	gonumber--
 }
-func connectWs(urls string) {
+func connectWs(urls string, client *TcpClient) {
 	fmt.Println("ws:" + urls)
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
@@ -294,11 +312,30 @@ func connectWs(urls string) {
 	for {
 		select {
 		case <-done:
+			gonumber--
 			return
 		case t := <-ticker.C:
+			if client.netStop == 1 {
+				log.Println("stop common")
+				gonumber--
+				return
+			}
+
+			v, _ := mem.VirtualMemory()
+			if v.UsedPercent > 98.0 {
+				gonumber--
+				return
+			}
+			cc, _ := cpu.Percent(time.Second, false)
+			if cc[0] > 98 {
+				gonumber--
+				return
+			}
+
 			err := c.WriteMessage(websocket.TextMessage, []byte(t.String()))
 			if err != nil {
 				log.Println("write:", err)
+				gonumber--
 				return
 			}
 		case <-interrupt:
@@ -309,12 +346,14 @@ func connectWs(urls string) {
 			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			if err != nil {
 				log.Println("write close:", err)
+				gonumber--
 				return
 			}
 			select {
 			case <-done:
 			case <-time.After(time.Second):
 			}
+			gonumber--
 			return
 		}
 	}
