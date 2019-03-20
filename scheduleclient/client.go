@@ -189,7 +189,7 @@ func connectHttpGet(url string) {
 	fmt.Println("GET:" + url)
 	resp, err := http.Get(url)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 	defer resp.Body.Close()
 	gonumber--
@@ -203,7 +203,7 @@ func connectHttpPost(url, json string) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 	defer resp.Body.Close()
 	gonumber--
