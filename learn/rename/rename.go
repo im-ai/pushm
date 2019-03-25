@@ -1,9 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -28,14 +33,142 @@ func GetAllFile(pathname, profix string) error {
 			GetAllFile(pathname+"\\"+fi.Name()+"\\", profix)
 		} else {
 			filePath := pathname + "\\" + fi.Name()
-			readfileAndRename(pathname, profix, filePath)
-
+			newFilePath := readfileAndRename(pathname, profix, filePath)
+			seek2line(newFilePath)
 		}
 	}
 	return err
 }
 
-func readfileAndRename(pathname, profix, filePath string) {
+func seek2line(filePath string) {
+
+	f, err := os.OpenFile(filePath, os.O_RDWR, 0644)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer f.Close()
+
+	rd := bufio.NewReader(f)
+	flag := 0
+	typenum := 0  //  第二行数字 + 3 必得 250
+	flagline := 0 //  0 ： 未处理  1,2 前添加 2,1,2    1: 处理过
+	res := ""
+	line1 := ""
+	line2 := ""
+	line3 := ""
+	var valid = regexp.MustCompile("[0-9]")
+	for {
+
+		flag++
+		line, err := rd.ReadString('\n') //以'\n'为结束符读入一行
+		if err != nil || io.EOF == err {
+			break
+		}
+
+		if flag == 1 {
+			line1 = line
+			fmt.Println("line1", line1)
+		} else if flag == 2 {
+			line2 = line
+			linetmp := valid.FindAllString(line2, -1)
+			i, err := strconv.Atoi(linetmp[0])
+			if err != nil {
+				typenum = 0
+			} else {
+				typenum = i
+			}
+			fmt.Println("line2", line2)
+		} else if flag == 3 {
+			line3 = line
+			fmt.Println("line3", line3)
+			t2 := valid.FindAllString(line2, -1)
+			t3 := valid.FindAllString(line3, -1)
+			fmt.Println(t2)
+			fmt.Println(t3)
+			if t2[0] == "1" && t3[0] == "2" {
+				flagline = 1
+				res = res + line1
+				res = res + "2\r\n"
+				res = res + line2
+				res = res + line3
+			} else {
+				res = res + line1
+				res = res + line2
+				res = res + line3
+			}
+			fmt.Println(res)
+		} else if flagline == 1 {
+			line250 := valid.FindAllString(line, -1)
+			join250 := strings.Join(line250, "")
+			if join250 != "250" {
+				res = res + "250\r\n"
+				res = res + "60\r\n"
+				if join250 != "32767" {
+					res = res + "32767\r\n"
+				}
+				res = res + line
+			} else {
+				res = res + line
+			}
+			flagline = 2
+		} else if flag == (typenum+3) && flagline != 2 {
+			fmt.Println("line250", line)
+			//  应该是 250
+			line250 := valid.FindAllString(line, -1)
+			join250 := strings.Join(line250, "")
+			fmt.Println(join250)
+			if join250 != "250" {
+				res = res + "250\r\n"
+				res = res + "60\r\n"
+				if join250 != "32767" {
+					res = res + "32767\r\n"
+				}
+				res = res + line
+			} else {
+				res = res + line
+			}
+		} else if flag == (typenum+5) && flagline != 2 {
+			line32767 := valid.FindAllString(line, -1)
+			join32767 := strings.Join(line32767, "")
+			if join32767 != "32767" {
+				res = res + "32767\r\n"
+				res = res + line
+			} else {
+				res = res + line
+			}
+		} else {
+			res = res + line
+		}
+	}
+	f.Seek(0, 0)
+	f.WriteString(res)
+
+}
+
+//
+//else if flag == (typenum + 3) {
+//fmt.Println("line250",line)
+////  应该是 250
+//line250 := valid.FindAllString(line, -1)
+//if line250[0] != "250" {
+//res = res+"250\r\n"
+//res = res+"60\r\n"
+//res = res+line
+//}else{
+//res = res+line
+//}
+//}else if flag == (typenum+5){
+//fmt.Println("line32767",line)
+////  应该是 32767
+//line32767 := valid.FindAllString(line, -1)
+//if line32767[0] != "32767" {
+//res = res+"32767\r\n"
+//res = res+line
+//}else{
+//res = res+line
+//}
+//}
+func readfileAndRename(pathname, profix, filePath string) string {
 
 	now := time.Now()
 	y := fmt.Sprintf("%d", now.Year())
@@ -69,4 +202,5 @@ func readfileAndRename(pathname, profix, filePath string) {
 		fmt.Println(err)
 	}
 	time.Sleep(1 * time.Second)
+	return newpath
 }
