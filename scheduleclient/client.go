@@ -175,11 +175,11 @@ func (client *TcpClient) receivePackets() {
 		var pbody PressureBody
 		_ = json.Unmarshal([]byte(msg), &pbody)
 		v, _ := mem.VirtualMemory()
-		if v.UsedPercent > 98.0 {
+		if v.UsedPercent > 80.0 {
 			continue
 		}
 		cc, _ := cpu.Percent(time.Second, false)
-		if cc[0] > 98 {
+		if cc[0] > 80.0 {
 			continue
 		}
 		gonumber = gonumber + pbody.Number
@@ -265,6 +265,7 @@ func connectHttpGet(url string) {
 	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Println(err)
+		gonumber--
 		return
 	}
 	defer resp.Body.Close()
@@ -280,6 +281,7 @@ func connectHttpPost(url, json string) {
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
+		gonumber--
 		return
 	}
 	defer resp.Body.Close()
@@ -306,6 +308,7 @@ func connectWs(urls string, client *TcpClient) {
 			_, message, err := c.ReadMessage()
 			if err != nil {
 				log.Println("read:", err)
+				gonumber--
 				return
 			}
 			if client.netStop == 1 {
@@ -315,12 +318,12 @@ func connectWs(urls string, client *TcpClient) {
 			}
 
 			v, _ := mem.VirtualMemory()
-			if v.UsedPercent > 98.0 {
+			if v.UsedPercent > 80.0 {
 				gonumber--
 				return
 			}
 			cc, _ := cpu.Percent(time.Second, false)
-			if cc[0] > 98 {
+			if cc[0] > 80 {
 				gonumber--
 				return
 			}
@@ -344,12 +347,12 @@ func connectWs(urls string, client *TcpClient) {
 			}
 
 			v, _ := mem.VirtualMemory()
-			if v.UsedPercent > 98.0 {
+			if v.UsedPercent > 80.0 {
 				gonumber--
 				return
 			}
 			cc, _ := cpu.Percent(time.Second, false)
-			if cc[0] > 98 {
+			if cc[0] > 80 {
 				gonumber--
 				return
 			}

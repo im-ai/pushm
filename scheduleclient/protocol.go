@@ -21,7 +21,8 @@ type Packet struct {
 type HeartPacket struct {
 	Version   string `json:"version"`
 	Timestamp int64  `json:"timestamp"`
-	Gonumber  int    `json:"gonumber"`
+	Gonumber  int    `json:"gonumber"` // goroutine 数量
+
 }
 
 //数据包
