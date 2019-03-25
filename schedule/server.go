@@ -29,20 +29,54 @@ type TcpServer struct {
 
 func main() {
 
+	// 初始化配置
+	cfgerr := initCfg()
+	if cfgerr != nil {
+		return
+	}
+
+	//类似于初始化套接字，绑定端口
+	tcpServer := initTcpServer()
+	//记得关闭
+	defer tcpServer.listener.Close()
+
+	//开始接收请求
+	for {
+		conn, err := tcpServer.listener.Accept()
+		fmt.Println("accept tcp client %s", conn.RemoteAddr().String())
+		checkErr(err)
+		go Handle(conn)
+	}
+
+}
+
+func initTcpServer() *TcpServer {
+	hawkServer, err := net.ResolveTCPAddr("tcp", server)
+	checkErr(err)
+	//侦听
+	listen, err := net.ListenTCP("tcp", hawkServer)
+	checkErr(err)
+	tcpServer := &TcpServer{
+		listener:   listen,
+		hawkServer: hawkServer,
+	}
+	fmt.Println("start server successful......")
+	return tcpServer
+}
+
+func initCfg() error {
 	numberstr := getCfg("number", "sfig.ini")
 	fmt.Println("number:", numberstr)
 	nubmers, _ := strconv.Atoi(numberstr)
 	nubmer = nubmers
-
 	typeIdstr := getCfg("typeId", "sfig.ini")
 	fmt.Println("typeId:", typeIdstr)
 	typeId, _ := strconv.Atoi(typeIdstr)
-
 	urlstr := getCfg("url", "sfig.ini")
 	fmt.Println("url:", urlstr)
-
 	jsonstr := getCfg("json", "sfig.ini")
 	fmt.Println("json:", jsonstr)
+
 	config := &PressureBody{
 		TypeId: typeId,
 		Url:    urlstr,
@@ -52,35 +86,11 @@ func main() {
 	bytesa, e := json.Marshal(config)
 	if e != nil {
 		fmt.Println(e)
-		return
+		return e
 	}
-	bytesCombines := BytesCombine(bytesa, []byte("\n"))
-	bytesCombine = bytesCombines
+	bytesCombine = BytesCombine(bytesa, []byte("\n"))
 
-	//类似于初始化套接字，绑定端口
-	hawkServer, err := net.ResolveTCPAddr("tcp", server)
-	checkErr(err)
-	//侦听
-	listen, err := net.ListenTCP("tcp", hawkServer)
-	checkErr(err)
-	//记得关闭
-	defer listen.Close()
-
-	tcpServer := &TcpServer{
-		listener:   listen,
-		hawkServer: hawkServer,
-	}
-	fmt.Println("start server successful......")
-
-	//开始接收请求
-	for {
-		conn, err := tcpServer.listener.Accept()
-		fmt.Println("accept tcp client %s", conn.RemoteAddr().String())
-		checkErr(err)
-
-		go Handle(conn)
-	}
-
+	return nil
 }
 
 //处理函数，这是一个状态机
