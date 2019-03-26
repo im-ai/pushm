@@ -22,9 +22,10 @@ import (
 )
 
 var (
-	server       = ":9876"
-	nubmer       = 0
-	bytesCombine []byte
+	server          = ":9876"
+	nubmer          = 0
+	bytesCombine    []byte
+	goroutinenumber = 0
 )
 
 //与服务器相关的资源都放在这里面
@@ -44,11 +45,15 @@ func main() {
 	// 启动 指标服务器
 	go initMetrics()
 
+	// 启动 tcp 分发服务器
+	startTcpServer()
+}
+
+func startTcpServer() {
 	//类似于初始化套接字，绑定端口
 	tcpServer := initTcpServer()
 	//记得关闭
 	defer tcpServer.listener.Close()
-
 	//开始接收请求
 	for {
 		conn, err := tcpServer.listener.Accept()
@@ -56,7 +61,6 @@ func main() {
 		checkErr(err)
 		go Handle(conn)
 	}
-
 }
 
 func initMetrics() {
