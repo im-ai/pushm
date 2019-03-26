@@ -23,11 +23,12 @@ import (
 
 var (
 	server           = ":9876"
-	nubmer           = 0
 	bytesCombine     []byte
 	bytesCombineInit []byte
 	goroutinenumber  = 0
 	goroutinemap     = make(map[string]int)
+	nubmer           int
+	gonumber         int
 )
 
 //与服务器相关的资源都放在这里面
@@ -65,12 +66,59 @@ func startTcpServer() {
 	}
 }
 
+func changeconf(w http.ResponseWriter, r *http.Request) {
+	numbers, ok := r.URL.Query()["number"]
+	if !ok || len(numbers) < 1 {
+		log.Println("Url Param 'number' is missing")
+		return
+	}
+
+	gonumbers, ok := r.URL.Query()["gonumber"]
+	typeIds, ok := r.URL.Query()["typeId"]
+	urls, ok := r.URL.Query()["url"]
+	jsons, ok := r.URL.Query()["json"]
+
+	// Query()["key"] will return an array of items,
+	// we only want the single item.
+	numbert, _ := strconv.Atoi(string(numbers[0]))
+
+	log.Println("Url Param 'number' 1 is: ", nubmer)
+
+	configt := getConfig()
+	configt.Number = numbert
+	nubmer = numbert
+
+	if len(gonumbers) > 0 {
+		gonumbern, _ := strconv.Atoi(string(gonumbers[0]))
+		gonumber = gonumbern
+	}
+	if len(typeIds) > 0 {
+		typeId, _ := strconv.Atoi(string(typeIds[0]))
+		configt.TypeId = typeId
+	}
+	if len(urls) > 0 {
+		configt.Url = urls[0]
+	}
+	if len(jsons) > 0 {
+		configt.Json = jsons[0]
+	}
+
+	bytesa, e := json.Marshal(configt)
+	if e != nil {
+		fmt.Println(e)
+		return
+	}
+	bytesCombine = BytesCombine(bytesa, []byte("\n"))
+
+	log.Println("Url Param 'number' 2 is: ", nubmer)
+}
 func initMetrics() {
 	//初始化日志服务
 	logger := log.New(os.Stdout, "[Memory]", log.Lshortfile|log.Ldate|log.Ltime)
 
 	//初始一个http handler
 	http.Handle("/metrics", promhttp.Handler())
+	http.HandleFunc("/conf", changeconf)
 	//初始化一个容器
 	diskPercent := prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "go_memeory_percent",
@@ -145,7 +193,7 @@ func initCfg() error {
 	fmt.Println("url:", urlstr)
 	jsonstr := getCfg("json", "sfig.ini")
 	fmt.Println("json:", jsonstr)
-
+	gonumber = getConfigByKey("gonumber")
 	config := &PressureBody{
 		TypeId: typeId,
 		Url:    urlstr,
@@ -181,6 +229,8 @@ func getConfig() *PressureBody {
 	fmt.Println("url:", urlstr)
 	jsonstr := getCfg("json", "sfig.ini")
 	fmt.Println("json:", jsonstr)
+
+	gonumber = getConfigByKey("gonumber")
 
 	config := &PressureBody{
 		TypeId: typeId,
@@ -320,7 +370,6 @@ func processRecvData(packet *Packet, conn net.Conn) {
 		fmt.Println("Gonumber:", beatPacket.Gonumber)
 		goroutinemap[conn.RemoteAddr().String()] = beatPacket.Gonumber
 
-		gonumber := getConfigByKey("gonumber")
 		if goroutinenumber > gonumber {
 			fmt.Println("The maximum value has been reduced to goroutine  number:", gonumber)
 			return
