@@ -11,15 +11,63 @@
     <li>最大并发数：<input type="text"  value="100" id="gonumber" onchange="changevalue('gonumber')"></li>
     <li>类型Id(1:get 2:post 3:ws)：<input type="text" value="1" id="typeId" onchange="changevalue('typeId')"></li>
     <li>URL：<input type="text" value="http://www.baidu.com" id="url" onchange="changevalue('url')"></li>
-    <li>JSON：<input type="text" value="" id="json" onchange="changevalue('json')"></li>
+    <li>JSON：<textarea name="" id="json" cols="80" rows="10" onchange="changevalue('json')">
+                        {"reqHead":{"functionId":"HWW002002001",},"body":{"managerNo":"153",}}
+                    </textarea></li>
+</div>
+<div style="height: 50px"></div>
+<div>
+    <table>
+        <tr>
+
+            <td>
+                <li>单次下发并发数：<input type="text" value="1" id="number1" ></li>
+                <li>最大并发数：<input type="text"  value="1000" id="gonumber1"  ></li>
+                <li>类型Id(1:get 2:post 3:ws)：<input type="text" value="2" id="typeId1"  ></li>
+                <li>URL：<input type="text" value="http://192.168.9.136:2130/hww/" id="url1"  ></li>
+                <li>JSON：<textarea name="" id="json1" cols="80" rows="10">
+                        {"reqHead":{"functionId":"HWW002002001",},"body":{"managerNo":"153",}}
+                    </textarea></li>
+            </td>
+            <td width="100" onclick="selec(1)">
+
+            </td>
+            <td width="50" onclick="selec(1)">
+
+            </td>
+        </tr>
+
+    </table>
 </div>
 <script>
     function changevalue(id) {
-        var valu = document.getElementById(id).value
-        valu = trim(valu)
+
+        var number = document.getElementById("number").value
+        number = trim(number)
+        if (number.length == 0){
+            document.getElementById("number").value = "0"
+        } else{
+            document.getElementById("number").value = number
+        }
+
+        var gonumber = document.getElementById("gonumber").value
+        gonumber = trim(gonumber)
+        document.getElementById("gonumber").value = gonumber
+
+        var typeId = document.getElementById("typeId").value
+        typeId = trim(typeId)
+        document.getElementById("typeId").value = typeId
+
+        var url = document.getElementById("url").value
+        url = trim(url)
+        document.getElementById("url").value = url
+
+        var json = document.getElementById("json").value
+        json = trim(json)
+        document.getElementById("json").value = json
 
         $.ajax({
-            url:"http://192.168.1.70:1010/conf?"+id+"="+valu,
+            url:"http://192.168.1.70:1010/conf?number="+number+"&gonumber"+gonumber+"&typeId="+typeId+"&url="+url+"&json="+json,
             async: false,
             dataType:"jsonp",
             processData: false,
@@ -27,16 +75,28 @@
             success:function(data){
             }
         })
-
     }
 
     function trim(val) {
         while ( val.indexOf("0") == 0){
             val = val.substr(1,val.length)
         }
+        while ( val.indexOf(" ") == 0){
+            val = val.substr(1,val.length)
+        }
+        while ( val.lastIndexOf(" ") > 0){
+            val = val.substr(0,val.length-1)
+        }
         return val
     }
 
+    function selec(idx) {
+        document.getElementById("number").value = document.getElementById("number1").value
+        document.getElementById("gonumber").value = document.getElementById("gonumber1").value
+        document.getElementById("typeId").value = document.getElementById("typeId1").value
+        document.getElementById("url").value = document.getElementById("url1").value
+        document.getElementById("json").value = document.getElementById("json1").value
+    }
 </script>
 </body>
 </html>
