@@ -19,9 +19,10 @@ type Packet struct {
 
 //心跳包
 type HeartPacket struct {
-	Version   string `json:"version"`
-	Timestamp int64  `json:"timestamp"`
-	Gonumber  int    `json:"gonumber"`
+	Version      string `json:"version"`
+	Timestamp    int64  `json:"timestamp"`
+	Gonumber     int    `json:"gonumber"`
+	Responsetime int    `json:"responsetime"`
 }
 
 //数据包

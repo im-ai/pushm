@@ -28,6 +28,7 @@ var (
 	bytesCombineInit []byte
 	goroutinenumber  = 0
 	goroutinemap     = make(map[string]int)
+	goresptimemap    = make(map[string]int)
 	nubmer           int
 	gonumber         int
 )
@@ -145,8 +146,15 @@ func initMetrics() {
 	},
 		[]string{"number"},
 	)
+	responseTime := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "go_average_response_time",
+		Help: " go average response time",
+	},
+		[]string{"number"},
+	)
 	prometheus.MustRegister(diskPercent)
 	prometheus.MustRegister(goroutineCount)
+	prometheus.MustRegister(responseTime)
 
 	// 启动web服务，监听1010端口
 	go func() {
@@ -382,6 +390,7 @@ func processRecvData(packet *Packet, conn net.Conn) {
 		fmt.Println("RemoteAddr()", conn.RemoteAddr())
 		fmt.Println("Gonumber:", beatPacket.Gonumber)
 		goroutinemap[conn.RemoteAddr().String()] = beatPacket.Gonumber
+		goresptimemap[conn.RemoteAddr().String()] = beatPacket.Gonumber
 
 		if goroutinenumber > gonumber {
 			fmt.Println("The maximum value has been reduced to goroutine  number:", gonumber)

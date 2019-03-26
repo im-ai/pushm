@@ -82,10 +82,12 @@ func seek2line(filePath string) {
 			line3 = line
 			fmt.Println("line3", line3)
 			t2 := valid.FindAllString(line2, -1)
+			joint2 := strings.Join(t2, "")
 			t3 := valid.FindAllString(line3, -1)
-			fmt.Println(t2)
-			fmt.Println(t3)
-			if t2[0] == "1" && t3[0] == "2" {
+			joint3 := strings.Join(t3, "")
+			fmt.Println(joint2)
+			fmt.Println(joint3)
+			if joint2 == "1" && joint3 == "2" {
 				flagline = 1
 				res = res + line1
 				res = res + "2\r\n"
