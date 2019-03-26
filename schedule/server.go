@@ -22,10 +22,12 @@ import (
 )
 
 var (
-	server          = ":9876"
-	nubmer          = 0
-	bytesCombine    []byte
-	goroutinenumber = 0
+	server           = ":9876"
+	nubmer           = 0
+	bytesCombine     []byte
+	bytesCombineInit []byte
+	goroutinenumber  = 0
+	goroutinemap     = make(map[string]int)
 )
 
 //与服务器相关的资源都放在这里面
@@ -76,7 +78,14 @@ func initMetrics() {
 	},
 		[]string{"percent"},
 	)
+	goroutineCount := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "go_open_goroutine_count",
+		Help: " go open goroutine number",
+	},
+		[]string{"number"},
+	)
 	prometheus.MustRegister(diskPercent)
+	prometheus.MustRegister(goroutineCount)
 
 	// 启动web服务，监听1010端口
 	go func() {
@@ -97,6 +106,14 @@ func initMetrics() {
 		usedPercent := v.UsedPercent
 		logger.Println("get memeory use percent:", usedPercent)
 		diskPercent.WithLabelValues("usedMemory").Set(usedPercent)
+
+		tmp := 0
+		for _, vnum := range goroutinemap {
+			tmp += vnum
+		}
+		goroutinenumber = tmp
+		logger.Println("get open goroutine number :", goroutinenumber)
+		goroutineCount.WithLabelValues("openGoroutineNumber").Set(float64(goroutinenumber))
 		time.Sleep(time.Second * 2)
 	}
 
@@ -143,6 +160,35 @@ func initCfg() error {
 	bytesCombine = BytesCombine(bytesa, []byte("\n"))
 
 	return nil
+}
+
+func getConfigByKey(key string) int {
+	numberstr := getCfg(key, "sfig.ini")
+	fmt.Println("number:", numberstr)
+	nubmers, _ := strconv.Atoi(numberstr)
+	return nubmers
+}
+
+func getConfig() *PressureBody {
+	numberstr := getCfg("number", "sfig.ini")
+	fmt.Println("number:", numberstr)
+	nubmers, _ := strconv.Atoi(numberstr)
+	nubmer = nubmers
+	typeIdstr := getCfg("typeId", "sfig.ini")
+	fmt.Println("typeId:", typeIdstr)
+	typeId, _ := strconv.Atoi(typeIdstr)
+	urlstr := getCfg("url", "sfig.ini")
+	fmt.Println("url:", urlstr)
+	jsonstr := getCfg("json", "sfig.ini")
+	fmt.Println("json:", jsonstr)
+
+	config := &PressureBody{
+		TypeId: typeId,
+		Url:    urlstr,
+		Json:   jsonstr,
+		Number: nubmer,
+	}
+	return config
 }
 
 //处理函数，这是一个状态机
@@ -257,6 +303,29 @@ func processRecvData(packet *Packet, conn net.Conn) {
 		var beatPacket HeartPacket
 		json.Unmarshal(packet.PacketContent, &beatPacket)
 		fmt.Printf("recieve heat beat from [%s] ,data is [%v]\n", conn.RemoteAddr().String(), beatPacket)
+		_, ok := goroutinemap[conn.RemoteAddr().String()]
+		if !ok {
+			config := getConfig()
+			config.Number = -beatPacket.Gonumber
+			fmt.Println("Init remote client gonumber ", conn.RemoteAddr().String(), " goroutineNumber: ", config.Number)
+			bytesa, e := json.Marshal(config)
+			if e != nil {
+				fmt.Println(e)
+				return
+			}
+			bytesCombineInit = BytesCombine(bytesa, []byte("\n"))
+			conn.Write(bytesCombineInit)
+		}
+		fmt.Println("RemoteAddr()", conn.RemoteAddr())
+		fmt.Println("Gonumber:", beatPacket.Gonumber)
+		goroutinemap[conn.RemoteAddr().String()] = beatPacket.Gonumber
+
+		gonumber := getConfigByKey("gonumber")
+		if goroutinenumber > gonumber {
+			fmt.Println("The maximum value has been reduced to goroutine  number:", gonumber)
+			return
+		}
+		fmt.Println("send message:", string(bytesCombine))
 		conn.Write(bytesCombine)
 		return
 	case REPORT_PACKET:

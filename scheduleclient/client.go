@@ -265,11 +265,12 @@ func connectHttpGet(url string) {
 	resp, err := http.Get(url)
 	if err != nil {
 		fmt.Println(err)
-		gonumber--
 		return
 	}
 	defer resp.Body.Close()
-	gonumber--
+	defer func() {
+		gonumber--
+	}()
 }
 
 func connectHttpPost(url, json string) {
@@ -281,11 +282,12 @@ func connectHttpPost(url, json string) {
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
-		gonumber--
 		return
 	}
 	defer resp.Body.Close()
-	gonumber--
+	defer func() {
+		gonumber--
+	}()
 }
 func connectWs(urls string, client *TcpClient) {
 	fmt.Println("ws:" + urls)
@@ -301,6 +303,9 @@ func connectWs(urls string, client *TcpClient) {
 
 	done := make(chan struct{})
 
+	defer func() {
+		gonumber--
+	}()
 	// 读取数据
 	go func() {
 		defer close(done)
@@ -308,23 +313,19 @@ func connectWs(urls string, client *TcpClient) {
 			_, message, err := c.ReadMessage()
 			if err != nil {
 				log.Println("read:", err)
-				gonumber--
 				return
 			}
 			if client.netStop == 1 {
 				log.Println("stop common")
-				gonumber--
 				return
 			}
 
 			v, _ := mem.VirtualMemory()
 			if v.UsedPercent > 80.0 {
-				gonumber--
 				return
 			}
 			cc, _ := cpu.Percent(time.Second, false)
 			if cc[0] > 80 {
-				gonumber--
 				return
 			}
 			log.Printf("recv: %s", message)
@@ -337,30 +338,25 @@ func connectWs(urls string, client *TcpClient) {
 	for {
 		select {
 		case <-done:
-			gonumber--
 			return
 		case t := <-ticker.C:
 			if client.netStop == 1 {
 				log.Println("stop common")
-				gonumber--
 				return
 			}
 
 			v, _ := mem.VirtualMemory()
 			if v.UsedPercent > 80.0 {
-				gonumber--
 				return
 			}
 			cc, _ := cpu.Percent(time.Second, false)
 			if cc[0] > 80 {
-				gonumber--
 				return
 			}
 
 			err := c.WriteMessage(websocket.TextMessage, []byte(t.String()))
 			if err != nil {
 				log.Println("write:", err)
-				gonumber--
 				return
 			}
 		case <-interrupt:
@@ -371,17 +367,13 @@ func connectWs(urls string, client *TcpClient) {
 			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			if err != nil {
 				log.Println("write close:", err)
-				gonumber--
 				return
 			}
 			select {
 			case <-done:
 			case <-time.After(time.Second):
 			}
-			gonumber--
 			return
 		}
 	}
-	gonumber--
-
 }
