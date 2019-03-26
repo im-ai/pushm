@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/gogf/gf/g"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/shirou/gopsutil/mem"
@@ -48,8 +49,20 @@ func main() {
 	// 启动 指标服务器
 	go initMetrics()
 
+	// 启动控制页面
+	go initControl()
+
 	// 启动 tcp 分发服务器
 	startTcpServer()
+}
+
+func initControl() {
+	s := g.Server()
+	s.SetServerRoot(".")
+	s.SetRewrite("/index", "/index.html")
+	s.SetRewrite("/", "/index.html")
+	s.SetPort(1011)
+	s.Run()
 }
 
 func startTcpServer() {

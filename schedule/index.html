@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>控制中心</title>
+    <script src="jquery.min.js"></script>
+</head>
+<body>
+<div>
+    <li>单次下发并发数：<input type="text" value="0" id="number" onchange="changevalue('number')"></li>
+    <li>最大并发数：<input type="text"  value="100" id="gonumber" onchange="changevalue('gonumber')"></li>
+    <li>类型Id(1:get 2:post 3:ws)：<input type="text" value="1" id="typeId" onchange="changevalue('typeId')"></li>
+    <li>URL：<input type="text" value="http://www.baidu.com" id="url" onchange="changevalue('url')"></li>
+    <li>JSON：<input type="text" value="" id="json" onchange="changevalue('json')"></li>
+</div>
+<script>
+    function changevalue(id) {
+        var valu = document.getElementById(id).value
+        valu = trim(valu)
+
+        $.ajax({
+            url:"http://192.168.1.70:1010/conf?"+id+"="+valu,
+            async: false,
+            dataType:"jsonp",
+            processData: false,
+            type:"get",
+            success:function(data){
+            }
+        })
+
+    }
+
+    function trim(val) {
+        while ( val.indexOf("0") == 0){
+            val = val.substr(1,val.length)
+        }
+        return val
+    }
+
+</script>
+</body>
+</html>
