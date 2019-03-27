@@ -24,8 +24,11 @@ import (
 
 //默认的服务器地址
 var (
-	serveradd = "192.168.1.70:9876"
-	gonumber  = 0
+	serveradd        = "192.168.1.70:9876"
+	gonumber         = 0
+	responTime       = make(chan float64) //响应时间
+	averageRsponTime = 0.0
+	maxRsponTime     = 0.0
 )
 
 //客户端对象
@@ -34,85 +37,6 @@ type TcpClient struct {
 	hawkServer *net.TCPAddr
 	stopChan   chan struct{}
 	netStop    int
-}
-
-type program struct{}
-
-func (p *program) Start(s service.Service) error {
-	go p.run()
-	return nil
-}
-
-func (p *program) run() {
-	// 代码写在这儿
-
-	//拿到服务器地址信息
-INIT:
-	hawkServer, err := net.ResolveTCPAddr("tcp", serveradd)
-	if err != nil {
-		fmt.Printf("hawk server [%s] resolve error: [%s]\n", serveradd, err.Error())
-		fmt.Println("重试连接服务器...")
-		time.Sleep(10 * time.Second)
-		goto INIT
-	}
-	//连接服务器
-	connection, err := net.DialTCP("tcp", nil, hawkServer)
-	if err != nil {
-		fmt.Printf("connect to hawk server error: [%s]\n", err.Error())
-		fmt.Println("重试连接服务器...")
-		time.Sleep(10 * time.Second)
-		goto INIT
-	}
-	client := &TcpClient{
-		connection: connection,
-		hawkServer: hawkServer,
-		stopChan:   make(chan struct{}),
-		netStop:    0,
-	}
-
-	//启动接收
-	go client.receivePackets()
-
-	//发送心跳的goroutine
-	go func() {
-		heartBeatTick := time.Tick(1 * time.Second)
-		for {
-			select {
-			case <-heartBeatTick:
-				client.sendHeartPacket()
-				if client.netStop == 1 {
-					fmt.Println("net stop common !")
-					return
-				}
-			case <-client.stopChan:
-				break
-			}
-		}
-	}()
-	<-client.stopChan
-	fmt.Println("重试连接服务器...")
-	time.Sleep(10 * time.Second)
-	goto INIT
-	//测试用的，开300个goroutine每秒发送一个包
-	//for i := 0; i < 300; i++ {
-	//	go func() {
-	//		sendTimer := time.After(1 * time.Second)
-	//		for {
-	//			select {
-	//			case <-sendTimer:
-	//				client.sendReportPacket()
-	//				sendTimer = time.After(1 * time.Second)
-	//			case <-client.stopChan:
-	//				return
-	//			}
-	//		}
-	//	}()
-	//}
-	//等待退出
-}
-
-func (p *program) Stop(s service.Service) error {
-	return nil
 }
 
 func main() {
@@ -155,6 +79,19 @@ func main() {
 
 }
 
+// 响应时间读协程
+func respTimeLoop() {
+	for {
+		select {
+		case resTime := <-responTime:
+			averageRsponTime = (averageRsponTime + resTime) / 2
+			if resTime > maxRsponTime {
+				maxRsponTime = resTime
+			}
+		}
+	}
+}
+
 // 接收数据包
 func (client *TcpClient) receivePackets() {
 	pool, _ := ants.NewPool(200000)
@@ -181,6 +118,12 @@ func (client *TcpClient) receivePackets() {
 		cc, _ := cpu.Percent(time.Second, false)
 		if cc[0] > 80.0 {
 			continue
+		}
+		if pbody.Number == 0 {
+			gonumber = 0
+			responTime = make(chan float64)
+			averageRsponTime = 0.0
+			maxRsponTime = 0.0
 		}
 		gonumber = gonumber + pbody.Number
 		for i := 0; i < pbody.Number; i++ {
@@ -230,9 +173,11 @@ func (client *TcpClient) sendReportPacket() {
 //发送心跳包，与发送数据包一样
 func (client *TcpClient) sendHeartPacket() {
 	heartPacket := HeartPacket{
-		Version:   "1.0",
-		Timestamp: time.Now().Unix(),
-		Gonumber:  gonumber,
+		Version:         "1.0",
+		Timestamp:       time.Now().Unix(),
+		Gonumber:        gonumber,
+		Responsetime:    averageRsponTime,
+		Responsemaxtime: maxRsponTime,
 	}
 	packetBytes, err := json.Marshal(heartPacket)
 	if err != nil {
@@ -262,7 +207,9 @@ func getRandString() string {
 
 func connectHttpGet(url string) {
 	fmt.Println("GET:" + url)
+	start := time.Now()
 	resp, err := http.Get(url)
+	responTime <- time.Since(start).Seconds()
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -276,10 +223,12 @@ func connectHttpGet(url string) {
 func connectHttpPost(url, json string) {
 	fmt.Println("POST:" + url)
 	var jsonStr = []byte(json)
+	start := time.Now()
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	resp, err := client.Do(req)
+	responTime <- time.Since(start).Seconds()
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -310,7 +259,10 @@ func connectWs(urls string, client *TcpClient) {
 	go func() {
 		defer close(done)
 		for {
+			start := time.Now()
 			_, message, err := c.ReadMessage()
+			responTime <- time.Since(start).Seconds()
+
 			if err != nil {
 				log.Println("read:", err)
 				return
@@ -376,4 +328,70 @@ func connectWs(urls string, client *TcpClient) {
 			return
 		}
 	}
+}
+
+type program struct{}
+
+func (p *program) Start(s service.Service) error {
+	go p.run()
+	return nil
+}
+
+func (p *program) run() {
+	// 代码写在这儿
+
+	//拿到服务器地址信息
+INIT:
+	hawkServer, err := net.ResolveTCPAddr("tcp", serveradd)
+	if err != nil {
+		fmt.Printf("hawk server [%s] resolve error: [%s]\n", serveradd, err.Error())
+		fmt.Println("重试连接服务器...")
+		time.Sleep(10 * time.Second)
+		goto INIT
+	}
+	//连接服务器
+	connection, err := net.DialTCP("tcp", nil, hawkServer)
+	if err != nil {
+		fmt.Printf("connect to hawk server error: [%s]\n", err.Error())
+		fmt.Println("重试连接服务器...")
+		time.Sleep(10 * time.Second)
+		goto INIT
+	}
+	client := &TcpClient{
+		connection: connection,
+		hawkServer: hawkServer,
+		stopChan:   make(chan struct{}),
+		netStop:    0,
+	}
+
+	//启动接收
+	go client.receivePackets()
+
+	//启动 读协程，获取响应时间
+	go respTimeLoop()
+
+	//发送心跳的goroutine
+	go func() {
+		heartBeatTick := time.Tick(1 * time.Second)
+		for {
+			select {
+			case <-heartBeatTick:
+				client.sendHeartPacket()
+				if client.netStop == 1 {
+					fmt.Println("net stop common !")
+					return
+				}
+			case <-client.stopChan:
+				break
+			}
+		}
+	}()
+	<-client.stopChan
+	fmt.Println("重试连接服务器...")
+	time.Sleep(10 * time.Second)
+	goto INIT
+}
+
+func (p *program) Stop(s service.Service) error {
+	return nil
 }

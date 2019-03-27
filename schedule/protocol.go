@@ -19,10 +19,11 @@ type Packet struct {
 
 //心跳包
 type HeartPacket struct {
-	Version      string `json:"version"`
-	Timestamp    int64  `json:"timestamp"`
-	Gonumber     int    `json:"gonumber"`
-	Responsetime int    `json:"responsetime"`
+	Version         string  `json:"version"`
+	Timestamp       int64   `json:"timestamp"`
+	Gonumber        int     `json:"gonumber"`
+	Responsetime    float64 `json:"responsetime"`
+	Responsemaxtime float64 `json:"responsemaxtime"` //  最大响应时间
 }
 
 //数据包

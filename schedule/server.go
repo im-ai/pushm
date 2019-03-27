@@ -28,7 +28,8 @@ var (
 	bytesCombineInit []byte
 	goroutinenumber  = 0
 	goroutinemap     = make(map[string]int)
-	goresptimemap    = make(map[string]int)
+	goresptimemap    = make(map[string]float64) //平均响应时间
+	gorespmaxtimemap = make(map[string]float64) //最大响应时间
 	nubmer           int
 	gonumber         int
 )
@@ -98,6 +99,12 @@ func changeconf(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("Url Param 'number' 1 is: ", nubmer)
 
+	if numbert == 0 {
+		goroutinemap = make(map[string]int)
+		goresptimemap = make(map[string]float64)
+		gorespmaxtimemap = make(map[string]float64)
+	}
+
 	configt := getConfig()
 	configt.Number = numbert
 	nubmer = numbert
@@ -152,9 +159,16 @@ func initMetrics() {
 	},
 		[]string{"number"},
 	)
+	responseMaxTime := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "go_max_response_time",
+		Help: " go max response time",
+	},
+		[]string{"number"},
+	)
 	prometheus.MustRegister(diskPercent)
 	prometheus.MustRegister(goroutineCount)
 	prometheus.MustRegister(responseTime)
+	prometheus.MustRegister(responseMaxTime)
 
 	// 启动web服务，监听1010端口
 	go func() {
@@ -176,13 +190,36 @@ func initMetrics() {
 		logger.Println("get memeory use percent:", usedPercent)
 		diskPercent.WithLabelValues("usedMemory").Set(usedPercent)
 
+		// open goroutine size
 		tmp := 0
 		for _, vnum := range goroutinemap {
 			tmp += vnum
 		}
-		goroutinenumber = tmp
-		logger.Println("get open goroutine number :", goroutinenumber)
-		goroutineCount.WithLabelValues("openGoroutineNumber").Set(float64(goroutinenumber))
+		logger.Println("get open goroutine number :", tmp)
+		goroutineCount.WithLabelValues("openGoroutineNumber").Set(float64(tmp))
+
+		// 平均响应时间
+		tmptime := 0.0
+		for _, vnum := range goresptimemap {
+			tmptime += vnum
+		}
+		ilen := len(goresptimemap)
+		if ilen > 0 {
+			tmptime = tmptime / float64(ilen)
+		}
+		logger.Println("go average response time :", tmptime)
+		responseTime.WithLabelValues("averageResponTime").Set(tmptime)
+
+		// 最大响应时间
+		tmpmaxtime := 0.0
+		for _, vnum := range gorespmaxtimemap {
+			if vnum > tmpmaxtime {
+				tmpmaxtime = vnum
+			}
+		}
+		logger.Println("go average response time :", tmpmaxtime)
+		responseMaxTime.WithLabelValues("maxResponTime").Set(tmpmaxtime)
+
 		time.Sleep(time.Second * 2)
 	}
 
@@ -377,7 +414,6 @@ func processRecvData(packet *Packet, conn net.Conn) {
 		_, ok := goroutinemap[conn.RemoteAddr().String()]
 		if !ok {
 			config := getConfig()
-			config.Number = -beatPacket.Gonumber
 			fmt.Println("Init remote client gonumber ", conn.RemoteAddr().String(), " goroutineNumber: ", config.Number)
 			bytesa, e := json.Marshal(config)
 			if e != nil {
@@ -390,7 +426,8 @@ func processRecvData(packet *Packet, conn net.Conn) {
 		fmt.Println("RemoteAddr()", conn.RemoteAddr())
 		fmt.Println("Gonumber:", beatPacket.Gonumber)
 		goroutinemap[conn.RemoteAddr().String()] = beatPacket.Gonumber
-		goresptimemap[conn.RemoteAddr().String()] = beatPacket.Gonumber
+		goresptimemap[conn.RemoteAddr().String()] = beatPacket.Responsetime
+		gorespmaxtimemap[conn.RemoteAddr().String()] = beatPacket.Responsemaxtime
 
 		if goroutinenumber > gonumber {
 			fmt.Println("The maximum value has been reduced to goroutine  number:", gonumber)
