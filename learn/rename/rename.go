@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -9,15 +10,20 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 var (
+	lock   sync.Mutex
+	nt     time.Time
 	path   string
 	profix string
 )
 
 func main() {
+	nt = time.Now()
+	nt.AddDate(-1, 0, 0)
 	fmt.Printf("请输入前缀: ")
 	fmt.Scanln(&profix)
 	fmt.Printf("请把目录拖进来: ")
@@ -52,7 +58,7 @@ func seek2line(filePath string) {
 	flag := 0
 	typenum := 0  //  第二行数字 + 3 必得 250
 	flagline := 0 //  0 ： 未处理  1,2 前添加 2,1,2    1: 处理过
-	res := ""
+	var buffer bytes.Buffer
 	line1 := ""
 	line2 := ""
 	line3 := ""
@@ -89,28 +95,28 @@ func seek2line(filePath string) {
 			fmt.Println(joint3)
 			if joint2 == "1" && joint3 == "2" {
 				flagline = 1
-				res = res + line1
-				res = res + "2\r\n"
-				res = res + line2
-				res = res + line3
+				buffer.WriteString(line1)
+				buffer.WriteString("2\r\n")
+				buffer.WriteString(line2)
+				buffer.WriteString(line3)
 			} else {
-				res = res + line1
-				res = res + line2
-				res = res + line3
+				buffer.WriteString(line1)
+				buffer.WriteString(line2)
+				buffer.WriteString(line3)
 			}
-			fmt.Println(res)
+			fmt.Println(buffer.String())
 		} else if flagline == 1 {
 			line250 := valid.FindAllString(line, -1)
 			join250 := strings.Join(line250, "")
 			if join250 != "250" {
-				res = res + "250\r\n"
-				res = res + "60\r\n"
+				buffer.WriteString("250\r\n")
+				buffer.WriteString("60\r\n")
 				if join250 != "32767" {
-					res = res + "32767\r\n"
+					buffer.WriteString("32767\r\n")
 				}
-				res = res + line
+				buffer.WriteString(line)
 			} else {
-				res = res + line
+				buffer.WriteString(line)
 			}
 			flagline = 2
 		} else if flag == (typenum+3) && flagline != 2 {
@@ -120,30 +126,30 @@ func seek2line(filePath string) {
 			join250 := strings.Join(line250, "")
 			fmt.Println(join250)
 			if join250 != "250" {
-				res = res + "250\r\n"
-				res = res + "60\r\n"
+				buffer.WriteString("250\r\n")
+				buffer.WriteString("60\r\n")
 				if join250 != "32767" {
-					res = res + "32767\r\n"
+					buffer.WriteString("32767\r\n")
 				}
-				res = res + line
+				buffer.WriteString(line)
 			} else {
-				res = res + line
+				buffer.WriteString(line)
 			}
 		} else if flag == (typenum+5) && flagline != 2 {
 			line32767 := valid.FindAllString(line, -1)
 			join32767 := strings.Join(line32767, "")
 			if join32767 != "32767" {
-				res = res + "32767\r\n"
-				res = res + line
+				buffer.WriteString("32767\r\n")
+				buffer.WriteString(line)
 			} else {
-				res = res + line
+				buffer.WriteString(line)
 			}
 		} else {
-			res = res + line
+			buffer.WriteString(line)
 		}
 	}
 	f.Seek(0, 0)
-	f.WriteString(res)
+	f.WriteString(buffer.String())
 
 }
 
@@ -170,16 +176,27 @@ func seek2line(filePath string) {
 //res = res+line
 //}
 //}
+
 func readfileAndRename(pathname, profix, filePath string) string {
+	lock.Lock()
+	sfm := getTime()
+	lock.Unlock()
+	newpath := pathname + "\\" + profix + "-" + sfm + ".txt"
+	fmt.Println(newpath)
+	err := os.Rename(filePath, newpath)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return newpath
+}
 
-	now := time.Now()
-	y := fmt.Sprintf("%d", now.Year())
-	m := fmt.Sprintf("%d", now.Month())
-	d := fmt.Sprintf("%d", now.Day())
-	h := fmt.Sprintf("%d", now.Hour())
-	mm := fmt.Sprintf("%d", now.Minute())
-	s := fmt.Sprintf("%d", now.Second())
-
+func getTime() string {
+	y := fmt.Sprintf("%d", nt.Year())
+	m := fmt.Sprintf("%d", nt.Month())
+	d := fmt.Sprintf("%d", nt.Day())
+	h := fmt.Sprintf("%d", nt.Hour())
+	mm := fmt.Sprintf("%d", nt.Minute())
+	s := fmt.Sprintf("%d", nt.Second())
 	if len(m) == 1 {
 		m = "0" + m
 	}
@@ -195,14 +212,9 @@ func readfileAndRename(pathname, profix, filePath string) string {
 	if len(s) == 1 {
 		s = "0" + s
 	}
-
 	sfm := y + m + d + h + mm + s
-	newpath := pathname + "\\" + profix + "-" + sfm + ".txt"
-	fmt.Println(newpath)
-	err := os.Rename(filePath, newpath)
-	if err != nil {
-		fmt.Println(err)
-	}
-	time.Sleep(1 * time.Second)
-	return newpath
+
+	duration, _ := time.ParseDuration("1s")
+	nt = nt.Add(duration)
+	return sfm
 }
