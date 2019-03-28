@@ -88,6 +88,9 @@ func respTimeLoop() {
 			if resTime > maxRsponTime {
 				maxRsponTime = resTime
 			}
+			fmt.Println("resTime:", resTime)
+			fmt.Println("maxRsponTime:", maxRsponTime)
+			fmt.Println("averageRsponTime:", averageRsponTime)
 		}
 	}
 }
@@ -112,16 +115,18 @@ func (client *TcpClient) receivePackets() {
 		var pbody PressureBody
 		_ = json.Unmarshal([]byte(msg), &pbody)
 		v, _ := mem.VirtualMemory()
+		fmt.Println("mem:", v.UsedPercent)
 		if v.UsedPercent > 80.0 {
 			continue
 		}
 		cc, _ := cpu.Percent(time.Second, false)
+		fmt.Println("cpu:", cc[0])
 		if cc[0] > 80.0 {
 			continue
 		}
 		if pbody.Number == 0 {
 			gonumber = 0
-			responTime = make(chan float64)
+			//responTime = make(chan float64)
 			averageRsponTime = 0.0
 			maxRsponTime = 0.0
 		}
