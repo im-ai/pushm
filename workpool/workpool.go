@@ -86,6 +86,7 @@ package workpool
 import (
 	"errors"
 	"fmt"
+	"github.com/panjf2000/ants"
 	"log"
 	"runtime"
 	"sync"
@@ -94,6 +95,7 @@ import (
 
 var (
 	ErrCapacity = errors.New("Thread Pool At Capacity")
+	Pool, _     = ants.NewPool(10000)
 )
 
 type (
@@ -183,12 +185,15 @@ func (workPool *WorkPool) Shutdown(goRoutine string) (err error) {
 func (workPool *WorkPool) PostWork(goRoutine string, work PoolWorker) (err error) {
 	defer catchPanic(&err, goRoutine, "PostWork")
 
-	poolWork := poolWork{work, make(chan error)}
-
-	defer close(poolWork.resultChannel)
-
-	workPool.queueChannel <- poolWork
-	err = <-poolWork.resultChannel
+	err = Pool.Submit(func() {
+		poolWork := poolWork{work, make(chan error)}
+		defer close(poolWork.resultChannel)
+		workPool.queueChannel <- poolWork
+		err = <-poolWork.resultChannel
+		if err != nil {
+			fmt.Printf("ERROR: %s\n", err)
+		}
+	})
 
 	return err
 }
@@ -272,11 +277,10 @@ func (workPool *WorkPool) queueRoutine() {
 		// Post work to be processed.
 		case queueItem := <-workPool.queueChannel:
 			// If the queue is at capacity don't add it.
-			if atomic.AddInt32(&workPool.queuedWork, 0) == workPool.queueCapacity {
-				queueItem.resultChannel <- ErrCapacity
-				continue
-			}
-
+			//if atomic.AddInt32(&workPool.queuedWork, 0) == workPool.queueCapacity {
+			//	queueItem.resultChannel <- ErrCapacity
+			//	continue
+			//}
 			// Increment the queued work count.
 			atomic.AddInt32(&workPool.queuedWork, 1)
 
