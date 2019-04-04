@@ -84,9 +84,7 @@
         while ( val.indexOf(" ") == 0){
             val = val.substr(1,val.length)
         }
-        while ( val.lastIndexOf(" ") > 0){
-            val = val.substr(0,val.length-1)
-        }
+        val = $.trim(val)
         return val
     }
 
