@@ -7,21 +7,21 @@ import (
 )
 
 type Connection struct {
-	wsConn *websocket.Conn
-	inChan chan []byte
-	outChan chan [] byte
+	wsConn    *websocket.Conn
+	inChan    chan []byte
+	outChan   chan []byte
 	closeChan chan byte
 
-	mutex sync.Mutex
+	mutex   sync.Mutex
 	isClose bool
 }
 
 func InitConnetcion(wsConn *websocket.Conn) (conn *Connection, err error) {
 	conn = &Connection{
-		wsConn:wsConn,
-		inChan:make(chan []byte,1000),
-		outChan:make(chan []byte,1000),
-		closeChan:make(chan byte ,1),
+		wsConn:    wsConn,
+		inChan:    make(chan []byte, 1000),
+		outChan:   make(chan []byte, 1000),
+		closeChan: make(chan byte, 1),
 	}
 
 	// 拉起内部 读协程
@@ -31,9 +31,9 @@ func InitConnetcion(wsConn *websocket.Conn) (conn *Connection, err error) {
 	return
 }
 
-func (conn *Connection)ReadMessage()(data[]byte,err error)  {
+func (conn *Connection) ReadMessage() (data []byte, err error) {
 	select {
-	case data = <- conn.inChan:
+	case data = <-conn.inChan:
 	case <-conn.closeChan:
 		err = errors.New("connection is closed")
 
@@ -41,7 +41,7 @@ func (conn *Connection)ReadMessage()(data[]byte,err error)  {
 	return
 }
 
-func (conn *Connection)WriterMessage(data[] byte)(err error)  {
+func (conn *Connection) WriterMessage(data []byte) (err error) {
 
 	select {
 	case conn.outChan <- data:
@@ -51,13 +51,13 @@ func (conn *Connection)WriterMessage(data[] byte)(err error)  {
 	}
 	return
 }
-func (conn*Connection)Close()  {
+func (conn *Connection) Close() {
 	// 线程安全，可重入的close
 	conn.wsConn.Close()
 
 	// 关闭底层长连接，还会关闭 closeChan
 	// 有可能多次关闭
-	// 保证执行一次，枷锁
+	// 保证执行一次，加锁
 	conn.mutex.Lock()
 	if !conn.isClose {
 		close(conn.closeChan)
@@ -65,17 +65,16 @@ func (conn*Connection)Close()  {
 	}
 	conn.mutex.Unlock()
 
-
 }
 
 // 内部实现  读协程
-func (conn *Connection)readLoop()  {
-	var(
+func (conn *Connection) readLoop() {
+	var (
 		data []byte
-		err error
+		err  error
 	)
-	for{
-		if _,data,err =conn.wsConn.ReadMessage(); err!=nil{
+	for {
+		if _, data, err = conn.wsConn.ReadMessage(); err != nil {
 			goto ERR
 		}
 
@@ -86,28 +85,26 @@ func (conn *Connection)readLoop()  {
 			goto ERR
 		}
 
-
 	}
-	ERR:
-		conn.Close()
+ERR:
+	conn.Close()
 }
 
 func (conn *Connection) writeLop() {
-	var(
+	var (
 		data []byte
-		err error
+		err  error
 	)
-	for{
+	for {
 		select {
-		case data= <-conn.outChan:
+		case data = <-conn.outChan:
 		case <-conn.closeChan:
 			goto ERR
 		}
-		if err= conn.wsConn.WriteMessage(websocket.TextMessage,data);err != nil{
+		if err = conn.wsConn.WriteMessage(websocket.TextMessage, data); err != nil {
 			goto ERR
 		}
 	}
-	ERR:
-		conn.Close()
+ERR:
+	conn.Close()
 }
-

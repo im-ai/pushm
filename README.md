@@ -25,3 +25,11 @@ wsHandler
 - [x] 服务端 人为控制goroutine数量
 - [x] 服务端 人为控制goroutine数量产生速率
 
+三、模块管理   
+```
+set GO111MODULE=auto
+```
+```
+go mod init
+go mod tidy
+```
