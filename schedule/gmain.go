@@ -29,7 +29,6 @@ func main() {
 
 	// 启动控制页面
 	go InitControl()
-	InitControl()
 
 	// 启动 tcp 分发服务器
 	StartTcpServer()
