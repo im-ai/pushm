@@ -1,0 +1,14 @@
+{
+    "database"   : {
+        "default" : [
+            {
+                "host"     : "192.168.9.135",
+                "port"     : "3306",
+                "user"     : "root",
+                "pass"     : "hellowinb2c",
+                "name"     : "b2c_hm503b",
+                "type"     : "mysql"
+            }
+        ]
+    }
+}

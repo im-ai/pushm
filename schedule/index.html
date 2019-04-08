@@ -17,9 +17,8 @@
 </div>
 <div style="height: 50px"></div>
 <div>
-    <table>
+    <table id="tabledt">
         <tr>
-
             <td>
                 <li>单次下发并发数：<input type="text" value="1" id="number1" ></li>
                 <li>最大并发数：<input type="text"  value="1000" id="gonumber1"  ></li>
@@ -27,13 +26,11 @@
                 <li>URL：<input type="text" value="http://192.168.9.136:2130/hww/" id="url1"  ></li>
                 <li>JSON：<textarea name="" id="json1" cols="80" rows="10">
                         {"reqHead":{"functionId":"HWW002002001",},"body":{"managerNo":"153",}}
-                    </textarea></li>
+                 </textarea></li>
             </td>
             <td width="100" onclick="selec(1)">
-
             </td>
             <td width="50" onclick="selec(1)">
-
             </td>
         </tr>
 
@@ -89,12 +86,51 @@
     }
 
     function selec(idx) {
-        document.getElementById("number").value = document.getElementById("number1").value
-        document.getElementById("gonumber").value = document.getElementById("gonumber1").value
-        document.getElementById("typeId").value = document.getElementById("typeId1").value
-        document.getElementById("url").value = document.getElementById("url1").value
-        document.getElementById("json").value = document.getElementById("json1").value
+        if (idx == 1){
+            document.getElementById("number").value = document.getElementById("number"+idx).value
+            document.getElementById("gonumber").value = document.getElementById("gonumber"+idx).value
+            document.getElementById("typeId").value = document.getElementById("typeId"+idx).value
+            document.getElementById("url").value = document.getElementById("url"+idx).value
+        }else{
+            document.getElementById("number").value = document.getElementById("number1").value
+            document.getElementById("gonumber").value = document.getElementById("gonumber1").value
+            document.getElementById("typeId").value = document.getElementById("typeId1").value
+            document.getElementById("url").value = document.getElementById("url1").value
+        }
+        document.getElementById("json").value = document.getElementById("json"+idx).value
     }
+
+    $(document).ready(function () {
+        $.ajax({
+            url:"http://192.168.1.70:1011/api/handler/1",
+            dataType:"json",
+            type:"get",
+            success:function(data){
+                console.log(data)
+                for (let i = 0; i < data.length; i++) {
+                    var obnj = data[i]
+                    var $tr = $(`
+                        <tr>
+                            <td>
+                                <li>接口： `+obnj.title+`</li>
+                                <li>JSON：<textarea name="" id="json`+(i+2)+`" cols="80" rows="10">
+                                        `+obnj.req_json+`
+                                 </textarea></li>
+                            </td>
+                            <td width="100" onclick="selec(`+(i+2)+`)">
+                            </td>
+                            <td width="50" onclick="selec(`+(i+2)+`)">
+                            </td>
+                        </tr>
+                    `);
+                    var $table = $("#tabledt");
+                    $table.append($tr)
+                }
+
+            }
+        })
+    })
+
 </script>
 </body>
 </html>
