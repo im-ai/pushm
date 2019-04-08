@@ -111,7 +111,7 @@
                         <tr>
                             <td>
                                 <li>接口： ` + obnj.function_id + `  ` + obnj.title + `</li>
-                                <li>JSON：<textarea name="" id="json` + (i + 2) + `" cols="80" rows="5">` + obnj.req_json + `</textarea></li>
+                                <li>JSON：<textarea name="" id="json` + (i + 2) + `" cols="80" rows="3">` + obnj.req_json + `</textarea></li>
                             </td>
                             <td width="100" onclick="selec(` + (i + 2) + `)">
                             </td>
@@ -138,7 +138,10 @@
             var scrollTop = $(this).scrollTop();
             var scrollHeight = $(document).height();
             var windowHeight = $(this).height();
-            if (scrollTop + windowHeight == scrollHeight) {
+            console.log(scrollTop)
+            console.log(windowHeight)
+            console.log(scrollHeight-100)
+            if (scrollTop + windowHeight >= (scrollHeight-100)) {
                 // 此处是滚动条到底部时候触发的事件，在这里写要加载的数据，或者是拉动滚动条的操作
                 curpage++
                 loadData(curpage);
