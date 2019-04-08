@@ -44,7 +44,7 @@ func (c *Controller) Get() {
 		i = 1
 	}
 
-	r, _ := db.Table("sys_app_function_time").Cache(3, "sys_app_function_time"+page).ForPage(i, 10).OrderBy("id desc").Select()
+	r, _ := db.Table("sys_app_function_time").Cache(3, "sys_app_function_time"+page).Where("function_id like 'HWW%'").ForPage(i, 10).OrderBy("id desc").Select()
 	fmt.Println(r.ToJson())
 	c.Response.Writeln(r.ToJson())
 
