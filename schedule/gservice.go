@@ -15,11 +15,11 @@ func ProcessRecvData(packet *Packet, conn net.Conn) {
 	case HEART_BEAT_PACKET:
 		var beatPacket HeartPacket
 		json.Unmarshal(packet.PacketContent, &beatPacket)
-		fmt.Printf("recieve heat beat from [%s] ,data is [%v]\n", conn.RemoteAddr().String(), beatPacket)
+		//fmt.Printf("recieve heat beat from [%s] ,data is [%v]\n", conn.RemoteAddr().String(), beatPacket)
 		_, ok := goroutinemap[conn.RemoteAddr().String()]
 		if !ok {
 			config := GetConfig()
-			fmt.Println("Init remote client gonumber ", conn.RemoteAddr().String(), " goroutineNumber: ", config.Number)
+			//fmt.Println("Init remote client gonumber ", conn.RemoteAddr().String(), " goroutineNumber: ", config.Number)
 			bytesa, e := json.Marshal(config)
 			if e != nil {
 				fmt.Println(e)
@@ -41,23 +41,23 @@ func ProcessRecvData(packet *Packet, conn net.Conn) {
 				conn.Write(bytesCombineInit)
 			}
 		}
-		fmt.Println("RemoteAddr()", conn.RemoteAddr())
-		fmt.Println("Gonumber:", beatPacket.Gonumber)
+		//fmt.Println("RemoteAddr()", conn.RemoteAddr())
+		//fmt.Println("Gonumber:", beatPacket.Gonumber)
 		goroutinemap[conn.RemoteAddr().String()] = beatPacket.Gonumber
 		goresptimemap[conn.RemoteAddr().String()] = beatPacket.Responsetime
 		gorespmaxtimemap[conn.RemoteAddr().String()] = beatPacket.Responsemaxtime
 
 		if goroutinenumber > gonumber {
-			fmt.Println("The maximum value has been reduced to goroutine  number:", gonumber)
+			//fmt.Println("The maximum value has been reduced to goroutine  number:", gonumber)
 			return
 		}
-		fmt.Println("send message:", string(bytesCombine))
+		//fmt.Println("send message:", string(bytesCombine))
 		conn.Write(bytesCombine)
 		return
 	case REPORT_PACKET:
 		var reportPacket ReportPacket
 		json.Unmarshal(packet.PacketContent, &reportPacket)
-		fmt.Printf("recieve report data from [%s] ,data is [%v]\n", conn.RemoteAddr().String(), reportPacket)
+		//fmt.Printf("recieve report data from [%s] ,data is [%v]\n", conn.RemoteAddr().String(), reportPacket)
 		conn.Write([]byte("Report data has recive\n"))
 		return
 	}

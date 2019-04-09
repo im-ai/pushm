@@ -13,16 +13,16 @@ import (
 
 func InitCfg() error {
 	numberstr := GetCfg("number", "sfig.ini")
-	fmt.Println("number:", numberstr)
+	//fmt.Println("number:", numberstr)
 	nubmers, _ := strconv.Atoi(numberstr)
 	nubmer = nubmers
 	typeIdstr := GetCfg("typeId", "sfig.ini")
-	fmt.Println("typeId:", typeIdstr)
+	//fmt.Println("typeId:", typeIdstr)
 	typeId, _ := strconv.Atoi(typeIdstr)
 	urlstr := GetCfg("url", "sfig.ini")
-	fmt.Println("url:", urlstr)
+	//fmt.Println("url:", urlstr)
 	jsonstr := GetCfg("json", "sfig.ini")
-	fmt.Println("json:", jsonstr)
+	//fmt.Println("json:", jsonstr)
 	gonumber = GetConfigByKey("gonumber")
 	config := &PressureBody{
 		TypeId: typeId,
@@ -42,7 +42,7 @@ func InitCfg() error {
 
 func GetConfigByKey(key string) int {
 	numberstr := GetCfg(key, "sfig.ini")
-	fmt.Println("number:", numberstr)
+	//fmt.Println("number:", numberstr)
 	nubmers, _ := strconv.Atoi(numberstr)
 	return nubmers
 }
@@ -72,16 +72,16 @@ func GetCfg(tag string, filepath string) string {
 
 func GetConfig() *PressureBody {
 	numberstr := GetCfg("number", "sfig.ini")
-	fmt.Println("number:", numberstr)
+	//fmt.Println("number:", numberstr)
 	nubmers, _ := strconv.Atoi(numberstr)
 	nubmer = nubmers
 	typeIdstr := GetCfg("typeId", "sfig.ini")
-	fmt.Println("typeId:", typeIdstr)
+	//fmt.Println("typeId:", typeIdstr)
 	typeId, _ := strconv.Atoi(typeIdstr)
 	urlstr := GetCfg("url", "sfig.ini")
-	fmt.Println("url:", urlstr)
+	//fmt.Println("url:", urlstr)
 	jsonstr := GetCfg("json", "sfig.ini")
-	fmt.Println("json:", jsonstr)
+	//fmt.Println("json:", jsonstr)
 
 	gonumber = GetConfigByKey("gonumber")
 
@@ -110,7 +110,7 @@ func Changeconf(w http.ResponseWriter, r *http.Request) {
 	// we only want the single item.
 	numbert, _ := strconv.Atoi(string(numbers[0]))
 
-	log.Println("Url Param 'number' 1 is: ", nubmer)
+	//log.Println("Url Param 'number' 1 is: ", nubmer)
 
 	if numbert == 0 {
 		goroutinemap = make(map[string]int)
@@ -144,5 +144,5 @@ func Changeconf(w http.ResponseWriter, r *http.Request) {
 	}
 	bytesCombine = BytesCombine(bytesa, []byte("\n"))
 
-	log.Println("Url Param 'number' 2 is: ", nubmer)
+	//log.Println("Url Param 'number' 2 is: ", nubmer)
 }

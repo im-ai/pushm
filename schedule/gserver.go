@@ -23,7 +23,7 @@ func StartTcpServer() {
 	//开始接收请求
 	for {
 		conn, err := tcpServer.listener.Accept()
-		fmt.Println("accept tcp client %s", conn.RemoteAddr().String())
+		//fmt.Println("accept tcp client %s", conn.RemoteAddr().String())
 		CheckErr(err)
 		go Handle(conn)
 	}

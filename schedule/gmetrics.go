@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/shirou/gopsutil/mem"
@@ -58,13 +59,13 @@ func InitMetrics() {
 
 	//收集内存使用的百分比
 	for {
-		logger.Println("start collect memory used percent!")
+		//logger.Println("start collect memory used percent!")
 		v, err := mem.VirtualMemory()
 		if err != nil {
 			logger.Println("get memeory use percent error:%s", err)
 		}
 		usedPercent := v.UsedPercent
-		logger.Println("get memeory use percent:", usedPercent)
+		fmt.Println("get memeory use percent:", usedPercent)
 		diskPercent.WithLabelValues("usedMemory").Set(usedPercent)
 
 		// open goroutine size
@@ -72,7 +73,7 @@ func InitMetrics() {
 		for _, vnum := range goroutinemap {
 			tmp += vnum
 		}
-		logger.Println("get open goroutine number :", tmp)
+		fmt.Println("get open goroutine number :", tmp)
 		goroutineCount.WithLabelValues("openGoroutineNumber").Set(float64(tmp))
 
 		// 平均响应时间
@@ -84,7 +85,7 @@ func InitMetrics() {
 		if ilen > 0 {
 			tmptime = tmptime / float64(ilen)
 		}
-		logger.Println("go average response time :", tmptime)
+		fmt.Println("go average response time :", tmptime)
 		responseTime.WithLabelValues("averageResponTime").Set(tmptime)
 
 		// 最大响应时间
@@ -94,9 +95,10 @@ func InitMetrics() {
 				tmpmaxtime = vnum
 			}
 		}
-		logger.Println("go average response time :", tmpmaxtime)
+		fmt.Println("go average response time :", tmpmaxtime)
 		responseMaxTime.WithLabelValues("maxResponTime").Set(tmpmaxtime)
 
+		fmt.Println("")
 		time.Sleep(time.Second * 2)
 	}
 
