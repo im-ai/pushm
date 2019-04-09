@@ -1,4 +1,4 @@
-package safe
+package safemap
 
 var (
 	ADD interface{} = 1
