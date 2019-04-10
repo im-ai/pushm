@@ -7,8 +7,8 @@ import (
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
-	collector "github.com/im-ai/pushm/prometheus/collector"
-	"github.com/im-ai/pushm/prometheus/config"
+	collector "github.com/im-ai/pushm/prometheus/nginx-exporter/collector"
+	"github.com/im-ai/pushm/prometheus/nginx-exporter/config"
 )
 
 var (

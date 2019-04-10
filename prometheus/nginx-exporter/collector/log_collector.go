@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hpcloud/tail"
-	"github.com/im-ai/pushm/prometheus/config"
+	"github.com/im-ai/pushm/prometheus/nginx-exporter/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/satyrius/gonx"
 )
