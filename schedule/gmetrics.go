@@ -58,10 +58,9 @@ func InitMetrics() {
 	}()
 
 	idx := 0
-	totalnum := 0
-	arrgnum :=make([]int,1000,1000)
+	arrgnum := make([]int, 100, 100)
 	go func() {
-		for{
+		for {
 			select {
 			case gnum := <-goroutinemap:
 				arrgnum[idx] = gnum
@@ -69,12 +68,14 @@ func InitMetrics() {
 					idx = 0
 				}
 				idx++
-				fmt.Printf("arr %v\n",arrgnum)
-				for i := 0; i< goclientnumber	;i++  {
-					totalnum = totalnum+arrgnum[i]
+				fmt.Println("gnum:", "\t", idx, "\t", gnum)
+				fmt.Printf("arr %v\n", arrgnum)
+				totalnum := 0
+				for i := 0; i < goclientnumber; i++ {
+					totalnum = totalnum + arrgnum[i]
 				}
 
-				fmt.Println("go open goroutine number ",totalnum)
+				fmt.Println("go open goroutine number ", totalnum)
 				goroutineCount.WithLabelValues("openGoroutineNumber").Set(float64(totalnum))
 			}
 		}
@@ -82,11 +83,11 @@ func InitMetrics() {
 
 	avgtimecfg := 0.0
 	go func() {
-		for{
+		for {
 			select {
 			case avgtime := <-goresptimemap:
-				avgtimecfg = (avgtimecfg+avgtime)/2
-				fmt.Println("go average response time ",avgtimecfg)
+				avgtimecfg = (avgtimecfg + avgtime) / 2
+				fmt.Println("go average response time ", avgtimecfg)
 				responseTime.WithLabelValues("averageResponTime").Set(avgtimecfg)
 			}
 		}
@@ -94,10 +95,10 @@ func InitMetrics() {
 
 	maxtimecfg := 0.0
 	go func() {
-		for{
+		for {
 			select {
 			case maxtime := <-gorespmaxtimemap:
-				if maxtime > maxtimecfg{
+				if maxtime > maxtimecfg {
 					maxtimecfg = maxtime
 				}
 				fmt.Println("go max response time ", maxtimecfg)
