@@ -23,6 +23,7 @@ func StartTcpServer() {
 	//开始接收请求
 	for {
 		conn, err := tcpServer.listener.Accept()
+		goclientnumber++
 		//fmt.Println("accept tcp client %s", conn.RemoteAddr().String())
 		CheckErr(err)
 		go Handle(conn)
@@ -51,6 +52,9 @@ func initTcpServer() *TcpServer {
 //0xFF|0xFF和0xFF|0xFE类似于前导码
 func Handle(conn net.Conn) {
 	defer conn.Close()
+	defer func() {
+		goclientnumber--
+	}()
 	//状态机状态
 	state := 0x00
 	//数据包长度

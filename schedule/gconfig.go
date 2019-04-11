@@ -94,6 +94,25 @@ func GetConfig() *PressureBody {
 	return config
 }
 
+var(
+	TypeId int    // 1: http get 2: http post  3: ws
+	Urlstr    string // 请求 url
+	Jsonstr   string // post参数
+	Number int    // 每秒开启 gorouting 次数
+)
+func GetConfigChange() *PressureBody {
+
+	config := &PressureBody{
+		TypeId: TypeId,
+		Url:    Urlstr,
+		Json:   Jsonstr,
+		Number: nubmer,
+	}
+
+	return config
+}
+
+
 func Changeconf(w http.ResponseWriter, r *http.Request) {
 	numbers, ok := r.URL.Query()["number"]
 	if !ok || len(numbers) < 1 {
@@ -112,12 +131,6 @@ func Changeconf(w http.ResponseWriter, r *http.Request) {
 
 	//log.Println("Url Param 'number' 1 is: ", nubmer)
 
-	if numbert == 0 {
-		goroutinemap = make(map[string]int)
-		goresptimemap = make(map[string]float64)
-		gorespmaxtimemap = make(map[string]float64)
-	}
-
 	configt := GetConfig()
 	configt.Number = numbert
 	nubmer = numbert
@@ -129,12 +142,15 @@ func Changeconf(w http.ResponseWriter, r *http.Request) {
 	if len(typeIds) > 0 {
 		typeId, _ := strconv.Atoi(string(typeIds[0]))
 		configt.TypeId = typeId
+		TypeId = typeId
 	}
 	if len(urls) > 0 {
 		configt.Url = urls[0]
+		Urlstr = urls[0]
 	}
 	if len(jsons) > 0 {
 		configt.Json = jsons[0]
+		Jsonstr = jsons[0]
 	}
 
 	bytesa, e := json.Marshal(configt)

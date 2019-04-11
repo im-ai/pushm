@@ -57,6 +57,54 @@ func InitMetrics() {
 		}
 	}()
 
+	idx := 0
+	totalnum := 0
+	arrgnum :=make([]int,1000,1000)
+	go func() {
+		for{
+			select {
+			case gnum := <-goroutinemap:
+				arrgnum[idx] = gnum
+				if idx > goclientnumber {
+					idx = 0
+				}
+				idx++
+				fmt.Printf("arr %v\n",arrgnum)
+				for i := 0; i< goclientnumber	;i++  {
+					totalnum = totalnum+arrgnum[i]
+				}
+
+				fmt.Println("go open goroutine number ",totalnum)
+				goroutineCount.WithLabelValues("openGoroutineNumber").Set(float64(totalnum))
+			}
+		}
+	}()
+
+	avgtimecfg := 0.0
+	go func() {
+		for{
+			select {
+			case avgtime := <-goresptimemap:
+				avgtimecfg = (avgtimecfg+avgtime)/2
+				fmt.Println("go average response time ",avgtimecfg)
+				responseTime.WithLabelValues("averageResponTime").Set(avgtimecfg)
+			}
+		}
+	}()
+
+	maxtimecfg := 0.0
+	go func() {
+		for{
+			select {
+			case maxtime := <-gorespmaxtimemap:
+				if maxtime > maxtimecfg{
+					maxtimecfg = maxtime
+				}
+				fmt.Println("go max response time ", maxtimecfg)
+				responseMaxTime.WithLabelValues("maxResponTime").Set(maxtimecfg)
+			}
+		}
+	}()
 	//收集内存使用的百分比
 	for {
 		//logger.Println("start collect memory used percent!")
@@ -67,36 +115,6 @@ func InitMetrics() {
 		usedPercent := v.UsedPercent
 		fmt.Println("get memeory use percent:", usedPercent)
 		diskPercent.WithLabelValues("usedMemory").Set(usedPercent)
-
-		// open goroutine size
-		tmp := 0
-		for _, vnum := range goroutinemap {
-			tmp += vnum
-		}
-		fmt.Println("get open goroutine number :", tmp)
-		goroutineCount.WithLabelValues("openGoroutineNumber").Set(float64(tmp))
-
-		// 平均响应时间
-		tmptime := 0.0
-		for _, vnum := range goresptimemap {
-			tmptime += vnum
-		}
-		ilen := len(goresptimemap)
-		if ilen > 0 {
-			tmptime = tmptime / float64(ilen)
-		}
-		fmt.Println("go average response time :", tmptime)
-		responseTime.WithLabelValues("averageResponTime").Set(tmptime)
-
-		// 最大响应时间
-		tmpmaxtime := 0.0
-		for _, vnum := range gorespmaxtimemap {
-			if vnum > tmpmaxtime {
-				tmpmaxtime = vnum
-			}
-		}
-		fmt.Println("go average response time :", tmpmaxtime)
-		responseMaxTime.WithLabelValues("maxResponTime").Set(tmpmaxtime)
 
 		fmt.Println("")
 		time.Sleep(time.Second * 2)

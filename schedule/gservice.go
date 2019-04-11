@@ -15,49 +15,65 @@ func ProcessRecvData(packet *Packet, conn net.Conn) {
 	case HEART_BEAT_PACKET:
 		var beatPacket HeartPacket
 		json.Unmarshal(packet.PacketContent, &beatPacket)
-		//fmt.Printf("recieve heat beat from [%s] ,data is [%v]\n", conn.RemoteAddr().String(), beatPacket)
-		_, ok := goroutinemap[conn.RemoteAddr().String()]
-		if !ok {
-			config := GetConfig()
-			//fmt.Println("Init remote client gonumber ", conn.RemoteAddr().String(), " goroutineNumber: ", config.Number)
+
+		config := GetConfigChange()
+		bytesa, e := json.Marshal(config)
+		if e != nil {
+			fmt.Println(e)
+			return
+		}
+		if config.Number == 0 {
+			bytesCombineInit = BytesCombine(bytesa, []byte("\n"))
+			conn.Write(bytesCombineInit)
+
+			if beatPacket.Gonumber > 0 {
+				config.Number = -beatPacket.Gonumber
+				beatPacket.Gonumber = 0
+			}
+
 			bytesa, e := json.Marshal(config)
 			if e != nil {
 				fmt.Println(e)
 				return
 			}
+
 			bytesCombineInit = BytesCombine(bytesa, []byte("\n"))
 			conn.Write(bytesCombineInit)
 
-			if config.Number == 0 {
-				if beatPacket.Gonumber > 0 {
-					config.Number = -beatPacket.Gonumber
-				}
-				bytesa, e := json.Marshal(config)
-				if e != nil {
-					fmt.Println(e)
-					return
-				}
-				bytesCombineInit = BytesCombine(bytesa, []byte("\n"))
-				conn.Write(bytesCombineInit)
-			}
+			beatPacket.Responsetime = 0
+			beatPacket.Responsemaxtime = 0
 		}
-		//fmt.Println("RemoteAddr()", conn.RemoteAddr())
-		//fmt.Println("Gonumber:", beatPacket.Gonumber)
-		goroutinemap[conn.RemoteAddr().String()] = beatPacket.Gonumber
-		goresptimemap[conn.RemoteAddr().String()] = beatPacket.Responsetime
-		gorespmaxtimemap[conn.RemoteAddr().String()] = beatPacket.Responsemaxtime
+
+		if beatPacket.Gonumber < 0 {
+			beatPacket.Gonumber = 0
+		}
+		if beatPacket.Responsetime < 0 {
+			beatPacket.Responsetime = 0
+		}
+		if beatPacket.Responsemaxtime < 0 {
+			beatPacket.Responsemaxtime = 0
+		}
+		goroutinemap <- beatPacket.Gonumber
+		goresptimemap <-  beatPacket.Responsetime
+		gorespmaxtimemap <- beatPacket.Responsemaxtime
+
+		if goroutineflag > goclientnumber {
+			goroutineflag = 0
+			goroutinenumber = 0
+		}
+
+		goroutineflag++
+		goroutinenumber = goroutinenumber+beatPacket.Gonumber
 
 		if goroutinenumber > gonumber {
-			//fmt.Println("The maximum value has been reduced to goroutine  number:", gonumber)
 			return
 		}
-		//fmt.Println("send message:", string(bytesCombine))
+		fmt.Println("send message:", string(bytesCombine))
 		conn.Write(bytesCombine)
 		return
 	case REPORT_PACKET:
 		var reportPacket ReportPacket
 		json.Unmarshal(packet.PacketContent, &reportPacket)
-		//fmt.Printf("recieve report data from [%s] ,data is [%v]\n", conn.RemoteAddr().String(), reportPacket)
 		conn.Write([]byte("Report data has recive\n"))
 		return
 	}

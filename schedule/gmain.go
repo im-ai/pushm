@@ -8,9 +8,11 @@ var (
 	bytesCombine     []byte
 	bytesCombineInit []byte
 	goroutinenumber  = 0
-	goroutinemap     = make(map[string]int)
-	goresptimemap    = make(map[string]float64) //平均响应时间
-	gorespmaxtimemap = make(map[string]float64) //最大响应时间
+	goroutineflag    = 0 // 10 次
+	goclientnumber   = 0 // 客户端数
+	goroutinemap     = make(chan int, 100)
+	goresptimemap    = make(chan float64,100) //平均响应时间
+	gorespmaxtimemap = make(chan float64,100) //最大响应时间
 	nubmer           int
 	gonumber         int
 	db               gdb.DB
