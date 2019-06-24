@@ -28,6 +28,7 @@ require (
 	github.com/stretchr/testify v1.3.0
 	github.com/tysontate/gommap v0.0.0-20190103205956-899e1273fb5c
 	google.golang.org/appengine v1.5.0 // indirect
+	google.golang.org/grpc v1.21.1
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
