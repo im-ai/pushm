@@ -8,7 +8,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.7 // indirect
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/gogf/gf v1.5.21
-	github.com/golang/protobuf v1.2.0
+	github.com/golang/protobuf v1.3.0
 	github.com/golib/assert v1.0.0
 	github.com/gorilla/websocket v1.4.0
 	github.com/hpcloud/tail v1.0.0
